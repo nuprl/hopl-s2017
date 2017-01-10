@@ -1,0 +1,23 @@
+# swapfiles
+\.\#*
+\#*
+*~
+*.swo
+*.swp
+
+# archives
+\.DS_STORE
+*.zip
+*.tar.gz
+*.tgz
+*.ps
+
+# latex
+*.aux
+*.bbl
+*.blg
+*.dvi
+*.log
+*.out
+
+# anything else?
