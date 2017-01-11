@@ -1,8 +1,8 @@
-hopl-s2017
+History of Programming Languages, Spring '17 Edition 
 ===
 
-Class repository for History of Programming Languages, Spring 2017.
-
+This repository is for supplemental material. The course web page lists the
+schedule and the links to the presented theme papers. 
 
 #### Course webpage
 
