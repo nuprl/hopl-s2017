@@ -13,3 +13,6 @@ schedule and the links to the presented theme papers.
 
 - `lecture_notes/` students' combined notes from lectures (mostly @gasche)
 
+#### Full-abstraction 
+
+* Morris. Lambda-calculus models of programming languages. MIT, 1969. 
