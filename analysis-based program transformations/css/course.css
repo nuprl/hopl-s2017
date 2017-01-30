@@ -1,0 +1,82 @@
+/* body,td        { background-color: #ffffe0;  */
+/*             	 /\* font-family:  Georgia, "Times New Roman", Times, serif; *\/ */
+/* 		 font-family: Arial, Verdana, sans-serif; */
+/* 	         font-size: 12pt; */
+/* 	         margin: 3%; */
+/*                  } */
+
+body {
+    font-family: "HelveticaNeueW01-45Ligh", "Helvetica Neue", HelveticaNeue, Helvetica, sans-serif;
+  font-size: 16px;
+  line-height: 1.25;
+  /* color: #615445; */
+  color: #000000;
+  /* background-color: #eeeeee; */
+  background-color: #ffffff;
+}
+
+
+body {min-width:640px}
+
+/* alternative fonts */
+/* Verdana, Arial, sans-serif; */
+/* Georgia, "Times New Roman", Times, serif; */
+
+tt,kbd,code {font-size: 12pt;}  /* the background color in paras looks fidgety */
+
+pre     {font-size: 11pt; background-color: #eeeed0;}
+
+.new {color:red;}
+.strike {color:gray; text-decoration:line-through;}
+
+address {font-size: 10pt;}
+
+/* put some padding after each li */
+li  {
+   padding-bottom: 10pt;
+   } 
+/* say class="condensed" to suppress the padding */
+.condensed li {
+  padding-bottom: 0px;
+  }
+
+
+/* divs */
+
+#banner {padding: 5px;}
+#menu {float:left; width:15%}
+#content {float:right; width:80%}
+
+#quotation {padding: 10px; margin-left: 20px; width:80%; background-color: #eeeed0}
+
+#footer {clear:both; width:100%} /* safari and opera need this */
+
+/* Thierry Koblentz says: the MSIE display:inline-block is to make
+   sure MSIE doesn't paint the backround above the containers,  
+   the overflow declaration is to make sure the containers do not drop
+   below siblings if content pushes the width (in modern browsers it
+   doesn't drop, but it spawns a horizontal scrollbar)  */
+
+/* Mitch Wand says: this breaks printing in Firefox, so I'm not going 
+   to put it in */
+
+/*
+#header,#menu,#content,#menu,#footer 
+    {overflow:hidden;
+     display:inline-block}
+*/
+#syllabus td {
+	border-width: thin thin thin thin;
+	padding: 0px 0px 0px 0px;
+	border-style: solid solid solid solid;
+	border-color: red red red red;
+	background-color: white;
+	-moz-border-radius: 0px 0px 0px 0px;
+}
+
+/* leaving room for rounding error (MSIE5.5) */
+/* #menu {width:20%} */
+/*#content {width:80%} */
+#footer {clear:both}
+
+}	

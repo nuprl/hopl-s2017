@@ -1,0 +1,122 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+
+<TITLE>Analysis-Based Program Transformations</TITLE>
+<link type="text/css" rel="stylesheet" href="css/course.css">
+
+<style>
+#menu {float:left; width:15%}
+#content {width:80%;}
+body {margin: 5%}
+</style>
+
+<style>
+td {
+        font-size: 12pt;
+        margin: 3%;
+        margin-left: 5px;
+	border-width: thin thin thin thin;
+	padding: 4px 4px 4px 4px;
+	border-style: solid solid solid solid;
+	border-color: #8080a0 #8080a0 #8080a0 #8080a0;
+}
+
+
+</style>
+
+</head>
+<body>
+
+
+<div id="banner">
+<h1 align=center>
+Materials on Analysis-Based Program Transformations</h1>
+
+<h2 align=center>
+Mitch Wand, February, 2017
+</h2>
+</div>
+
+<p>This page is for materials related to my lecture in <a href="http://www.ccs.neu.edu/home/matthias/7480-s17" >CS 7480
+History of Programming Languages</a>, February, 2017</p>
+
+<ul>
+  <li>My slides, in <a href="Slides.pptx" >ppt</a> and <a
+  href="Slides.pdf" >pdf</a>. 
+  </li>
+
+  <li><a href="page615.pdf" >Example of old-fashioned flow
+  equations</a> (from Aho, Lam, Sethi, and Ullman, Compilers:
+  Principles, Techniques, and Tools (2nd Edition), 2006).  </li>
+
+    <li><a href="shivers-pldi-91.pdf" >Olin Shivers paper</a> from 1991,
+  showing the state of the art at the time.  From Olin I learned the
+  key idea of deriving control flow and data flow at the same time.
+  </li>
+
+  <li><a href="My Questions - Spring 91.pdf" >My notebook page from
+  Spring 1991</a>, showing what I was worrying about at the time.
+  This is a page from a notepad at a DARPA meeting; my memory is that
+  I wrote it at lunch to show to Paul Hudak.</li>
+
+  <li>My <a href="Notes on Control Flow Analysis 1992 02 10.pdf"
+  >notes</a> from what appears to be a pl-seminar presentation in
+  January 1992. </li>
+
+  <li><a href=" Wand-Steckler-popl-94.pdf" >Selective and Lightweight
+  Closure Conversion</a>, with Paul Steckler.  This is our first paper
+  on CFA and program transformation.  This version is from POPL '94,
+  the first of several versions of the paper; it eventually appeared
+  in TOPLAS '97.  There's a lot more stuff in this paper than I will
+  discuss in class: we were trying to get towards polymorphic analysis
+  and also to get "ordinary" and closure-converted procedures to
+  interoperate. </li>
+
+  <li><a href=" Wand-Clinger-iccl-98.pdf" >Set Constraints for Destructive Array Update Optimization</a>, with
+  Will Clinger.  This version is from the IEEE Conference on Computer
+  Languages in 1998, a conference that existed only from 1988 to
+  1998. The <a href=" wand-clinger-jfp-01.pdf" >journal version</a>
+  appeared in JFP in 1991, with detailed proofs.  Christos Dimoulas
+  obtained a <a href="Dimoulas-Wand-vmcai-09.pdf" >more general
+  result</a>, including higher-order functions and arrays with non-scalar
+  values, which appeared in VMCAI 2009</li>
+  
+</ul>
+
+<p>Here are a couple of papers that we are unlikely to get to in
+class, but which you may find of interest.</p>
+
+<ul>
+
+
+    <li><a href="Wand-Siveroni-popl-99.pdf" >Constraint Systems for
+  Useless Variable Elimination</a>, with Igor Siveroni (POPL 1999),
+  used the same techniques to transform a program by not passing
+  values that were known dead.  Again, this provided proofs for
+  techniques that were discussed in Olin's dissertation.  </li>
+
+  <li><a href="Palsberg-Wand-jfp-03.pdf" >CPS Transformation of Flow
+  Information</a>, with Jens Palsberg (JFP 2003), considered the
+  question of how a CPS transformation changes the flow information of
+  a program.  This turned out to be a more subtle question than we
+  realized, since it depends on both what you mean by a CPS
+  translation and what you mean by 0CFA. </li>
+
+</ul>
+
+<p><hr>
+
+<font size=-1>
+<p align=right>
+<!-- hhmts start -->
+Last modified: Mon Jan 30 12:20:16 Eastern Standard Time 2017 <!-- hhmts end -->
+
+</div>
+
+ 
+
+</body>
+</html>
+
+
