@@ -1,5 +1,5 @@
 
- - [Talk outline](index.html)
+ - [Talk outline](index.md)
 
 ## Simple model of Actors
 

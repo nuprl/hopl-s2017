@@ -2,12 +2,12 @@
 
 **Tony Garnock-Jones <tonyg@ccs.neu.edu>**, 31 Jan 2017.
 
- - [Talk outline](index.html)
+ - [Talk outline](index.md)
  - Computational models:
-    - [Monitors](monitors.html)
-    - [Actors](actors.html)
-    - [Channels](channels.html)
-    - [Tuplespaces](tuplespaces.html)
+    - [Monitors](monitors.md)
+    - [Actors](actors.md)
+    - [Channels](channels.md)
+    - [Tuplespaces](tuplespaces.md)
 
 ## Paper list
 
@@ -294,7 +294,7 @@ use of monitor-like constructs, we see Hoare's original idea: it's
 possible to write code that accesses a monitored bundle of state
 outside the monitor!
 
-[Simple model of Monitors](monitors.html).
+[Simple model of Monitors](monitors.md).
 
 Evaluation in terms of conversational context:
 
@@ -363,7 +363,7 @@ than the more classic Actor languages. So if you go look at Agha's
 work, it'll look quite different. There was a HOPL-III paper from Joe
 Armstrong on Erlang.
 
-[Simple model of Actors](actors.html).
+[Simple model of Actors](actors.md).
 
  - Communication patterns: You get point-to-point, multiple-sender
    single-receiver messaging. That's it. If you need anything else,
@@ -438,7 +438,7 @@ for this talk. It's a lovely model and a really good paper, but the
 model I'll present here is simpler than Join. It's roughly equivalent
 to a simple synchronous-π-calculus extension of ISWIM.
 
-[Simple model of Channels](channels.html).
+[Simple model of Channels](channels.md).
 
  - Communication patterns: You get point-to-point, multiple-sender,
    multiple-receiver messaging. Anything else, you have to encode,
@@ -494,7 +494,7 @@ talk about in a moment, and lots of the variations over the years have
 been attempts to fix the model. Here, I'll be presenting the original
 basic Linda tuplespace model.
 
-[Simple model of Tuplespaces](tuplespaces.html).
+[Simple model of Tuplespaces](tuplespaces.md).
 
  - Communication patterns: Tuplespaces are really weird and
    interesting! They're intrinsically multicast, and reminiscent of
