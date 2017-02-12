@@ -1,0 +1,50 @@
+\usepackage[colorlinks=true]{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{dashrule}
+\usepackage{tikz}
+\usetikzlibrary{shapes}
+\usepackage{textgreek}
+\usepackage{multicol}
+\usepackage{listings}
+
+\renewcommand{\maketitle}[1]{{%
+\flushleft\textsf{#1 \hfill \today} \\
+\textsf{\hfill Ben Greenman} \\
+\vspace{1mm}
+\hrule
+\vspace{0.4cm}}}
+
+
+\newcommand{\flix}{\textsc{Flix}}
+\newcommand{\doop}{\textsc{Doop}}
+\newcommand{\datafun}{Datafun}
+\newcommand{\bddbddb}{\textsf{bddbddb}}
+\newcommand{\paddle}{\textsc{Paddle}}
+\newcommand{\coral}{\textsc{Coral}}
+\newcommand{\bb}{{\bf\sf{BB}}}
+\newcommand{\rd}{{\bf\sf{RD}}}
+\newcommand{\eq}{{\bf\sf{EQ}}}
+\newcommand{\coloneq}{::\,=}
+\newcommand{\colondash}{:\!\!-}
+\newcommand{\prolog}{\textsc{Prolog}}
+\newcommand{\fvs}[1]{\mathsf{fvs}(#1)}
+
+\newcommand{\dlp}[1]{\mathsf{#1}}
+\newcommand{\dlv}[1]{#1}
+
+\newcommand{\hdash}{{\vspace{1ex}}\hdashrule{\linewidth}{0.2ex}{1em}{\vspace{1ex}}}
+\newcommand{\earsattr}[2]{{\footnotesize\sc #1{\tt =}#2}}
+
+\newcommand{\assmann}{A{\textbeta}mann}
+\newcommand{\naturals}{\mathbb{N}}
+
+\newcommand{\localpdf}[2]{#2} % links to local pdfs not working, oh well
+\newcommand{\gbookhref}[2]{\href{https://books.google.com/books/about/Principles_of_Database_and_Knowledge_bas.html?id=#1}{#2}}
+\newcommand{\figref}[1]{Figure~\ref{#1}}
+\newcommand{\secref}[1]{Section~\ref{#1}}
+
+\newtheorem*{theorem}{Theorem}
+
+\newcommand{\qa}[2]{\vspace{2ex}\noindent \textbf{Q.} #1 \newline \noindent \textbf{A.} #2}
