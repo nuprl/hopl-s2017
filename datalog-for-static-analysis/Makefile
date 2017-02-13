@@ -1,12 +1,13 @@
-PAPER="datalog-for-static-analysis"
+ANNOTATED="annotated.tex"
+OUTLINE="datalog-for-static-analysis"
 
-all: bib
+all: annotated outline
 
-bib:
-	xelatex ${PAPER}
-	bibtex ${PAPER}
-	xelatex ${PAPER}
-	xelatex ${PAPER}
+annotated:
+	xelatex ${ANNOTATED}
 
-tex:
-	xelatex ${PAPER}
+outline:
+	xelatex ${OUTLINE}
+	bibtex ${OUTLINE}
+	xelatex ${OUTLINE}
+	xelatex ${OUTLINE}
