@@ -36,7 +36,7 @@ Technical Report ICS-TR-06-16, University of California, Irvine, 2006.
     significantly less engineering effort and memory overhead when compared to
     traditional method-based JITs.
 
-Andreas Gal, Brendan Eich, et al. 
+Andreas Gal, Brendan Eich, et al.
 Trace-based Just-in-Time Type Specialization for Dynamic Languages
 https://doi.org/10.1145/1542476.1542528
 Programming Language Design and Implementation (PLDI), 2009, pages 465-478.
@@ -66,29 +66,15 @@ Implementation, Compilation, Optimization of Object-Oriented Languages
     user program. PyPy requires hints from the language developer. The number
     of hints is usually small.
 
-    The novel idea in this paper is to trace the interpreter rather than the
-    user program. To be effective, the interpreter's dispatch loop needs to be
-    unrolled to correspond to user program loop. Furthermore, many operations
-    in the dispatch loop can be constant folded. The main benefit of this
-    approach is that dynamic language implementations using PyPy get tracing
-    and its optimizations for free.
-
-Michael Bebenita, Florian Brandner, et al. 
-SPUR: A Trace-Based JIT Compiler for CIL
-https://doi.org/10.1145/1869459.1869517
-Object-Oriented Programming, Systems, Languages and Applications (OOPSLA), 2010, pages 708-725.
-
-    This paper describes SPUR, a tracing JIT for JavaScript. However, instead
-    of tracing the high-level language, SPUR first compiles JavaScript to a
-    low-level intermediate language, which it then traces. SPUR also lacks an
-    interpreter, and uses multiple JITs for profiling, tracing, and optimizing.
-
-    Tracing an intermediate language allows the authors to reuse SPUR for
-    tracing components not written in JavaScript, such as runtime libraries,
-    and in the future, the browser Document Object Model (DOM) and layout
-    engine. The multiple JITs avoid duplicating effort to maintain both an
-    interpreter and a compiler, and also enable efficient transitions between
-    execution modes.
+    This paper applies the tracing technique from Dynamo and TraceMonkey.
+    However, instead of tracing the user program, the authors trace the
+    interpreter that executes the user program. The work in this paper is most
+    similar to DynamoRIO, an earlier project that applied Dynamo to
+    interpreters. To effectively trace an interpreter, the interpreter's
+    dispatch loop needs to be unrolled to correspond to user program loop.
+    Furthermore, many operations in the dispatch loop can be constant folded.
+    The main benefit of this approach is that dynamic language implementations
+    using PyPy get tracing and its optimizations for free.
 
 Håkan Ardö, Carl Friedrich Bolz, and Maciej Fijałkowski
 Loop-Aware Optimizations in PyPy's Tracing JIT
@@ -102,9 +88,13 @@ Dynamic Languages Symposium (DLS), 2012, pages 63-72.
     such as common subexpression elimination, which corresponds to hoisting
     loop invariant code.
 
-    This technique only applies to tracing JITs. Because a trace is a linear
-    sequence of code, there is no control-flow information. Optimizations
-    typically consist of a single forward pass, and so more complicated
-    optimizations such as loop-invariant code motion are not possible. By
-    peeling off a single loop iteration, the optimizer can see which
-    expressions are redundant in the loop and eliminate them.
+    The authors implement this optimization in PyPy, which was described in the
+    previous paper. However, the optimization applies to tracing JITs in
+    general, and is only needed due to the nature of traces. Because a trace is
+    a linear sequence of code, there is no control-flow information.
+    Optimizations typically consist of a single forward pass, and so more
+    complicated optimizations such as loop-invariant code motion are not
+    possible. By peeling off a single loop iteration, the optimizer can see
+    which expressions are redundant in the loop and eliminate them. No other
+    changes are needed to the optimizer, in contrast to TraceMonkey, which
+    manually implements a similar optimization.
