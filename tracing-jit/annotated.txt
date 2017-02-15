@@ -3,19 +3,20 @@ Dynamo: A Transparent Dynamic Optimization System
 https://doi.org/10.1145/349299.349303
 Programming Language Design and Implementation (PLDI), 2000, pages 1-12.
 
-    This paper introduces Dynamo, a system for transparently optimizing
-    programs. Dynamo interprets a machine code binary, monitoring it for hot
-    instruction sequences (called "traces"). Once a trace is hot, Dynamo
-    produces a "fragment" by optimizing and recompiling the trace, and then
-    stores it in a cache. On subsequent executions of the trace, Dynamo will
-    fetch the fragment and execute it directly on hardware. Once the fragment
-    has finished executing, control returns to Dynamo and the interpreter.
+    This paper introduces Dynamo, a system for dynamically optimizing programs.
+    Dynamo interprets a machine code binary, monitoring it for hot instruction
+    sequences (called "traces"). Once a trace is hot, Dynamo produces a
+    "fragment" by optimizing and recompiling the trace, and then stores it in a
+    cache. On subsequent executions of the trace, Dynamo will fetch the fragment
+    and execute it directly on hardware. Once the fragment has finished
+    executing, control returns to Dynamo and the interpreter.
 
     Programs are assumed to spend most of their time in loop bodies, which are
     captured by traces in Dynamo. The insight is to focus optimizations on
     these hot portions of code. Since traces consist of sequential code (which
     lack control-flow merge points) and run through function boundaries, more
     optimization opportunities become available.
+
 
 Andreas Gal and Michael Franz
 Incremental Dynamic Code Generation with Trace Trees
@@ -36,6 +37,7 @@ Technical Report ICS-TR-06-16, University of California, Irvine, 2006.
     significantly less engineering effort and memory overhead when compared to
     traditional method-based JITs.
 
+
 Andreas Gal, Brendan Eich, et al.
 Trace-based Just-in-Time Type Specialization for Dynamic Languages
 https://doi.org/10.1145/1542476.1542528
@@ -44,15 +46,15 @@ Programming Language Design and Implementation (PLDI), 2009, pages 465-478.
     This paper describes TraceMonkey, a tracing JIT for JavaScript used by the
     Firefox browser. When generating code for a dynamic language such as
     JavaScript, a compiler has to produce branching code that handles all the
-    different possible types. However, by tracing the branches and through
-    method calls, TraceMonkey is able to speculate on the types and generate
-    specialized code without branching.
+    different possible types. However, by tracing the sequence of instructions
+    that are executed, TraceMonkey is able to speculate on the types and
+    generate specialized code without branching.
 
     TraceMonkey builds on the previous paper, by adding tracing to a JIT for a
-    dynamic language. Implementing a dynamic language has its own challenges,
-    but many optimizations, such as type specialization, can be done cheaply
-    with tracing. The authors also present a new algorithm for handling traces
-    of nested loops.
+    dynamic language. A tracing JIT compiler helps with many problems caused by
+    a lack of types. The authors also present a new algorithm for handling
+    traces of nested loops.
+
 
 Carl Friedrich Bolz, Antonio Cuni, Maciej Fijałkowski, and Armin Rigo
 Tracing the Meta-Level: PyPy's Tracing JIT Compiler
@@ -75,6 +77,7 @@ Implementation, Compilation, Optimization of Object-Oriented Languages
     Furthermore, many operations in the dispatch loop can be constant folded.
     The main benefit of this approach is that dynamic language implementations
     using PyPy get tracing and its optimizations for free.
+
 
 Håkan Ardö, Carl Friedrich Bolz, and Maciej Fijałkowski
 Loop-Aware Optimizations in PyPy's Tracing JIT
