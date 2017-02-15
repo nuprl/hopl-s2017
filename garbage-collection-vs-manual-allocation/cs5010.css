@@ -1,0 +1,430 @@
+/* CSS for an online lesson in CS 5500 */
+
+/****************************************************************
+ *
+ * FIXME:
+ *
+ * Use kbd, var, code, samp, em, b, mark.
+ * 
+ ****************************************************************
+
+/****************************************************************
+ *
+ * element type selectors
+ *
+ ****************************************************************/
+
+body {
+/*min-width: 36em;*/
+/*max-width: 60em;*/
+/*height: 30em;*/
+  height: 100%;
+}
+
+body {
+  background-color: #e8f2fc;
+  font-family:  "Times New Roman", Times, Georgia, serif;
+  font-size: 13pt;
+  /*
+  font-family:  Verdana, Arial, Helvetica, sans-serif;
+  font-size: larger;
+  */
+/*font-size: 100%;*/
+/*margin: 10%;*/
+}
+
+body #maincontent {
+/*height: 600px;*/
+  height: 90%;
+  max-width: 1024px;
+/*  padding: 0% 10% 0% 10%; */
+  padding: 0% 10% 0% 10%;
+  overflow: visible;
+}
+
+html > body #footer {
+  position: fixed;
+  bottom: 5%;
+  right: 5%;
+  text-align: right;
+}
+
+/* FIXME:  For now, this will always be scaffolding for debugging. */
+
+body > p {
+/*font-size: smaller;*/
+  color: gray;
+  font-size: 50%;
+}
+
+/* FIXME:  Compatibility problem here.  */
+/* Safari seems to interpret this as a percentage of the element. */
+/* Firefox 20.0 interprets this as a percentage of the natural size. */
+
+img {
+  border-style: none;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+sub {
+  font-size: 75%;
+}
+
+sup {
+  font-size: 75%;
+}
+
+audio {
+  padding-top: 2em;
+  padding-right: 2em;
+  /* padding-bottom: 2em; */
+  padding-left: 2em;
+}
+
+/****************************************************************/
+
+/* FIXME: should use relative measurements throughout */
+
+table {
+/*  background-color: #808080;  */
+  background-color: #e8f2fc;
+}
+
+th {
+/*  background-color: #d8d8d8;  */
+  background-color: #d8e0e8;
+  font-family:  "Times New Roman", Times, Georgia, serif; 
+  font-size: 12pt;
+  margin: 3%;
+  padding: 5px;
+}
+
+td {
+/*  background-color: #d8d8d8;  */
+  background-color: #d8e0e8;
+  font-family:  "Times New Roman", Times, Georgia, serif; 
+  font-size: 12pt;
+  margin: 3%;
+  padding: 5px;
+}
+
+tr .narrow { width: 96px; }
+tr .medium { width: 200px; }
+tr .wide { width: 300px; }
+
+/* alternative fonts */
+/* Verdana, Arial, sans-serif; */
+/* Georgia, "Times New Roman", Times, serif; */
+
+tt,kbd,code {
+  font-size: 12pt;
+}
+
+/* code blocks have a slightly darker background */
+
+pre {
+  font-size: 11pt;
+  background-color: #d8e0e8;
+}
+
+/* blockquotes have a slightly darker background */
+
+blockquote {
+  background-color: #d8e8f4;
+}
+
+address {
+  font-size: 10pt;
+}
+
+/* put some padding after each li */
+li {padding-bottom: 4pt}
+
+/****************************************************************
+ *
+ * class selectors
+ *
+ ****************************************************************/
+
+.larger {
+  font-size: larger;
+}
+
+.muchlarger {
+  font-size: 150%;
+}
+
+.smaller {
+  font-size: 75%;
+}
+
+.muchsmaller {
+  font-size: 50%;
+}
+
+.darker {
+  background-color: #d0d0d8;
+}
+
+.gray {
+  color: gray;
+}
+
+.red {
+  color: red;
+}
+
+.green {
+  color: green;
+}
+
+.blue {
+  color: blue;
+}
+
+.orange {
+  color: orange;
+}
+
+.brighter {
+  color: #FF0000;
+  font-weight: bold;
+}
+
+.duller {
+  color: #808080;
+}
+
+.center {
+  text-align: center;
+}
+
+.unindented {
+  padding-left: 0%;
+}
+
+.indented {
+  padding-left: 10%;
+}
+
+.muchindented {
+  padding-left: 20%;
+}
+
+.fullwidth {
+  width: 32em;
+}
+
+.halfwidth {
+  width: 16em;
+}
+
+.quarterwidth {
+  width: 8em;
+}
+
+.verticalspace {
+  margin-top: 48px;
+}
+
+.clear {
+  clear: both;
+}
+
+.button {
+  font-weight: bold;
+  font-family: Arial, Helvetica, sans-serif;
+  text-decoration: none;
+  background-color: #EEEEEE;
+  color: #333333;
+  padding: 2px 6px 2px 6px;
+  border-top: 1px solid #CCCCCC;
+  border-right: 1px solid #333333;
+  border-bottom: 1px solid #333333;
+  border-left: 1px solid #CCCCCC;
+}
+
+.underline {
+  text-decoration: underline;
+}
+
+.courseMap {
+  width: 640px;
+}
+
+.FIXME {
+  color: #FF8800;
+  font-weight: bold;
+}
+
+/****************************************************************
+ *  From
+ *  http://stackoverflow.com/questions/5319278/css3-and-html5-hover-popup-box
+ *
+ *  Usage:
+ *
+ *  <a href="#" class="hovertext_link">Random item...</a>
+ *  <span class="hovertext">Some help here on this random item.</span>
+ */
+
+.hovertext {
+    background-color: #ccffcc;
+    border-radius: 0px;
+    display: none;
+    opacity: 0.9;
+    padding-top: 0px;
+    padding-bottom: 0px;
+    margin-bottom: 36px;
+    z-index: 100;
+}
+
+.hovertext_link:hover + span {
+    display: inline;
+}
+
+/****************************************************************/
+
+.inline {
+  display: inline;
+}
+
+.alignleft {
+  text-align: left;
+}
+
+.alignright {
+  text-align: right;
+}
+
+.floatleft {
+  float: left;
+  margin-right: 1em;
+}
+
+.floatright {
+  float: right;
+  margin-left: 1em;
+}
+
+.clear {
+  clear: both;
+}
+
+/****************************************************************
+ *
+ * ID selectors
+ *
+ ****************************************************************/
+
+#footer {clear:both; width:100%} /* safari and opera need this */
+
+/* FIXME */
+
+#banner {padding: 0px; text-align: center;}
+
+#menu {
+  padding: 16px;
+  margin-top: -72px;
+  float:left;
+  width:20%;
+}
+
+#content {
+  float:right;
+  width:75%
+}
+
+#quotation {padding: 10px;
+            margin-left: 20px;
+            width:80%;
+            background-color: #d8d8d8;}
+
+
+#fullwidth {clear:both; width:100%}
+#spacer {clear:both; width:100%}
+
+/****************************************************************
+ *
+ * Adapted from
+ * http://cssdemos.tupence.co.uk/image-popup.htm
+ *
+ ****************************************************************/
+
+ul.popup-on-hover {
+  list-style-type:none; /* remove the bullet point */
+  margin-left:0;
+}
+
+ul.popup-on-hover li {
+  display:inline-block; /* places the images in a line */
+  position: relative;
+  z-index: 0;           /* resets stack order - will increase later */
+  margin:10px 40px 0 20px;
+}
+
+ul.popup-on-hover img {
+/*  background-color:#eae9d4; */
+  background-color: #d0e0f0;
+  padding: 6px;
+  box-shadow: 0 0 6px rgba(132, 132, 132, .75);
+  border-radius: 4px;
+}
+
+ul.popup-on-hover span {
+  position:absolute;
+  left: -9999px;
+/*  background-color:#eae9d4; */
+  background-color: #d0e0f0;
+  padding: 10px;
+  font-family: 'Droid Sans', sans-serif;
+  font-size:.9em;
+  text-align: center;
+  color: #495a62;
+  box-shadow: 0 0 20px rgba(0,0,0, .75);
+  border-radius:8px;
+}
+
+ul.popup-on-hover span p {
+  width: 400px;
+  text-align: left;
+}
+
+ul.popup-on-hover li:hover {
+  z-index: 50;
+  cursor:pointer;
+}
+
+ul.popup-on-hover span img {
+  padding:2px;
+  background:#ccc;
+}
+
+ul.popup-on-hover li:hover span {
+  top: -100px; /* from bottom of thumbnail to top of popup image*/
+  left: -20px; /* from left of thumbnail to left of popup image*/
+}
+
+ul.popup-on-hover li:hover:nth-child(2) span {
+  left: -200px;
+}
+
+ul.popup-on-hover li:hover:nth-child(3) span {
+  left: -400px;
+}
+
+ul.popup-on-hover li:hover:nth-child(4) span {
+  top: 0px;
+  left: 40px;
+}
+
+/**IE Hacks - see http://css3pie.com/
+ * for more info on how to use CS3Pie and to download the latest version**/
+
+/*
+
+ul.popup-on-hover img, ul.popup-on-hover span {
+  behavior: url(pie/PIE.htc);
+} 
+
+ */
