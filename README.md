@@ -11,7 +11,8 @@ schedule and the links to the presented theme papers.
 
 #### Overview
 
-- `lecture_notes/` students' combined notes from lectures (mostly @gasche)
+- `lecture_notes/` students' combined notes from lectures
+- other folders are speakers' materials for their presentations
 
 #### Full-abstraction 
 

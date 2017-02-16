@@ -265,8 +265,8 @@ Suppose there are two ways an EARS can step:
   \node [left of=1,xshift=-1mm] (2) {$(S, Z_1)$};
   \node [right of=1,xshift=1mm] (3) {$(S, Z_2)$};
 
-  \draw[->] (0) -- node[left] {$R_1$} (2);
-  \draw[->] (0) -- node[right] {$R_2$} (3);
+  \draw[->] (0) -- node[left,xshift=-2mm] {$R_1$} (2);
+  \draw[->] (0) -- node[right,xshift=2mm] {$R_2$} (3);
 \end{tikzpicture}\end{center}
 
 Then there exists an EARS $(S, Z_3)$ such that:
@@ -541,7 +541,7 @@ That is, they added paths to a given control-flow graph to make context informat
 Consequently, the insensitive algorithm would give context-sensitive results.
 
 The obvious problem with this approach is that the number of contexts in a large, object-oriented program is usually large.\footnote{This is exactly why previous algorithms did not work at scale.}
-Whaley and Lam report that $10^14$ contexts is ``typical'', and one of the DaCapo benchmarks had $10^23$ contexts.\footnote{Writing this, I realize I don't know what they mean by ``context''. Like, what's the sensitivity. TODO fix.}
+Whaley and Lam report that $10^{14}$ contexts is ``typical'', and one of the DaCapo benchmarks had $10^{23}$ contexts.\footnote{Writing this, I realize I don't know what they mean by ``context''. Like, what's the sensitivity. TODO fix.}
 Yet they made the algorithm work at scale by:
 \begin{itemize}
 \item representing program paths as relations
@@ -561,7 +561,7 @@ The database back-end is binary decision diagrams.
 That's right, Whaley and Lam built an efficient deductive database from the ground up just to implement points-to analysis.
 
 Conclusion: they succeeded at a problem that nobody before they could solve.
-Their points-to analysis finished in minutes on programs selected from the DaCapo benchmarks~\cite{bghkmbdffghhjlmpsvvw-oopsla-2006}.\footnote{Remember that program with $10^23$ contexts? Well \bddbddb\ could not actually encode all those, it stopped at $2^64 - 1$ contexts and merged all others into the last context.}
+Their points-to analysis finished in minutes on programs selected from the DaCapo benchmarks~\cite{bghkmbdffghhjlmpsvvw-oopsla-2006}.\footnote{Remember that program with $10^{23}$ contexts? Well \bddbddb\ could not actually encode all those, it stopped at $2^{64} - 1$ contexts and merged all others into the last context.}
 
 
 \subsection*{A Commercial Datalog Engine}
