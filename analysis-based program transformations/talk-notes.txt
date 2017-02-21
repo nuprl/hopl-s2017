@@ -1,0 +1,288 @@
+# HOPL: Analysis-based program transformations
+Mitch Wand
+February 21, 2017
+
+The thesis of the course is that if you take a look at the history of
+papers you can find the deltas between one paper and the next. As
+Matthias pointed out early on, you can't trust the papers as they
+appear out of order, and you can't trust the people as they remember
+badly. It's a really hard problem to figure out what people do and
+when they did it, that's what historians do. I want to reject the idea
+that progress occurs in since well-defined deltas, and I want to show
+a movie clip that I think is a more accurate representation of the
+research process as it goes on.
+
+  The Lady from Shangai, 1947
+  The final scene with the shooting in the mirror maze.
+
+I think this clip says something about research as we experience
+it. You know there is something out there, but you don't know what it
+is or where it is. You spend a lot of time firing at mirrors.
+
+In the papers that you were presenting, you had the luxury of time to
+understand the perspective, to understand what was going on. The
+people doing the work did not.
+
+
+
+The problem that I started to look at, it's actually one of the few
+times in my career where I actually had a linear sequence of
+deltas. The problem was, why are optimizing compilers correct?
+
+The compiler reasons about the program. It "proves a theorem" about
+the program. But what theorem?
+
+In existing work on program analysis, in the 1970s, people would
+specify data-flow analyses with a set of equations. If these equations
+were wrong, how would we know?
+
+Abstract interpretation can be understood as summarizing a set of
+concrete execution traces into one "abstract" interpretation.
+
+Through the eighties I had been working on continuation-based
+compilers.
+
+
+Another piece of the story were two papers by Olin Shivers in 1988 and
+1991 -- Abstract Interpretation for Scheme. Olin's great insight was
+that "the data-flow graph and the control-flow graph have to be
+considered, discovered together".
+
+This work depended on transformation to CPS. There are no theorems
+in the paper. (Although there was a (complex) denotation semantics in
+Olin's dissertation.)
+
+
+Matthias: there are theorems insofar as the compiler manipulates
+theorems. There is no *meta*-theorem about those theorems being
+proven.
+
+Mitch: yes, for example there is no justification that the analysis
+being defined was in fact an abstract interpretation -- something that
+you have to prove in general.
+
+
+Matthias: when these papers came out, there was a huge controversy
+from the MIT AI group, that claimed that they had implemented the same
+algorithms in MIT Scheme around 1985.
+
+
+My insight: we don't need CPS or the denotational semantics.
+
+
+Ryan: I'm confused by your mention of the collecting semantics as
+a single-state machine.
+
+Mitch: the idea is that this state represents the whole program, with
+information about what happens at any point in it.
+
+
+What is the theorem being proven?
+
+Start with some term e₀. The "abstract values" are the λ-terms that
+occur in e₀.
+
+- For each subterm e of e₀, we want to collect the set φ(e) of all
+  possible abstract values of e.
+
+- For each bound variable x in e₀, collect the set ρ̂(x) of all
+  possible abstract values of x.
+
+
+Constraints:
+
+ at xˡ : ρ̂(l) ⊆ φ(l)
+ at (λx.e)ˡ : l ∈ φ(l)
+ at (e₁ˡ¹ e₂ˡ²)ˡ : if l' ↦ (λx.e₃ˡ³) ∈ φ(l₁),
+   we ask that φ(l₂) ⊆ ρ̂(x), and that φ(l₃) ⊆ φ(l).
+
+These are just definitions. What is the theorem? Let us consider any
+satisfying pair (φ,ρ̂) as a proposition about e₀. We can define
+a satisfaction relation
+
+We define satisfaction relations
+
+- for function environments (a ρ, not ρ̂, is the environment captured
+  by a closure; it maps free variable of the function body to values,
+  which are themselves closures (there is only λs in this language) :
+
+  ρ ⊨ ρ̂ iff
+    ∀(x ↦ (λy.e)ˡ, ρ') ∈ ρ
+    then l ∈ ρ̂(x) and ρ' ⊨ ρ̂
+ 
+- for closures
+
+  ((λx.e)ˡ, ρ) ⊨ (A, ρ̂) iff
+    (where A is a set of λ-labels)
+
+    ł ∈ A and ρ ⊨ ρ̂
+
+Soundness:
+
+  If (φ, ρ̂) is a solution to the constraints for e₀,
+    and eˡ is a subterm of e₀
+    and ρ is such that free-variables(e) ⊆ dom(ρ) and ρ ⊨ ρ̂
+  then, whenever ρ ⊢ e ⇓ ((λx.e')ˡ', ρ') 
+  we have that l' ∈ φ(l) and ρ' ⊨ ρ̂
+
+Proof:
+
+  by induction on the big-step semantics
+
+One thing that is neat about this, which I didn't realize until years
+later, is that doing the proof by induction on the big-step semantics
+means that this is actually an abstract interpretation of the big-step
+semantics.
+
+Two questions:
+
+  - How did we get from the intuition about values flowing to
+    variables to a theorem about definitions?
+
+  - Sometimes along the way we stopped talking about transformation!
+    We need to talk about that.
+
+My research programme for the nineties was to seek an increasingly
+difficult sequence of transformations, to see how we would use that.
+
+Selective and Lightweight Closure Conversion, Wand and Steckler, 1994 –
+the journal version went out in 1997.
+
+Question: Escape Analysis?
+
+Answer: when can a static variable be replaced by a dynamic variable
+because this value of this variable is available at runtime?
+
+
+Jan: why is closure conversion an optimization?
+
+Mitch: in the case where you see statically where the closure flows,
+you can reduce this at compile-time and turn local
+accesses/indirections into direct references to the definitions, and
+optimize further.
+
+(The 1994 papers phrases it as such:
+
+> In many cases, a closure need not include all the free variables of
+> a procedure, because some of the free variables are available at all
+> the places where the closure might be invoked. We call such
+> variables dynamic , because they behave the same as if the language
+> used dynamic scope, and we call the incomplete closures lightweight
+> closures . In the extreme, the closure might be able to bind all its
+> free variables at the call site, so no closure need be
+> created. Avoiding closure creation plays an important part in
+> creating good code for higher-order languages. Our results give
+> a method for proving the correctness of conversion algorithms which
+> in appropriate cases avoid building closures.
+
+)
+
+Matthias: I asked Paul Steckler the same question when he arrived at
+Rice, and we implemented lightweight closure conversion in
+Racket. Paul was able to provide simple examples were the speedup was
+tremendous, x2 or x3, but once implemented it only kicked in only
+a dozen places in actual code and it made no difference.
+
+Gabriel: note that there is a simple instance of this optimization
+that everyone implements, which is that when a function body contains
+a reference to a module value, we treat it as a constant rather than
+a free variable. This is absolutely essential for performance. It is
+often the case for optimizations that there exists a simplified
+version that brings most of the benefits.
+
+
+This work related to work that was being conducted around the same
+time on SASL, a functional language that tried to keep a functional
+(value) semantics but under the hood implement efficient (mutation)
+semantics – in particular for array operations.
+
+  Order-of-evaluation analysis for destructive updates in strict
+  functional languages with flat aggregates
+
+    A.V.S Sastry, William Clinger, Zena Ariola, FPCA '93
+
+This paper, as typical of the time, had no proofs. When Will Clinger
+arrived, I saw this paper and I thought it would be an excellent
+opportunity to exercise our proving acumen. It was a first-order
+language, what kind of semantics should be used? Will wanted big-step
+semantics, I chose to do small-step semantics. We finished our proofs
+on the same day! Then we had to decide which of the two proofs to
+submit, and I won the argument.
+
+The reason small-step won is that the small-step semantics,
+representing the continuation explicitly, made it easier to reason
+about the future (liveness is a property about the future). Will had
+a lot of side-conditions to represent the same thing, it was not as
+nice.
+
+The general pipeline in our paper was
+
+  propagation analysis
+  (soundness)
+  alias analysis 
+  (soundness)
+  live variable analysis
+  (soundness)
+  transformations
+  (correctness)
+
+Two comments:
+  - I only handle weak update, it would be nice to support strong
+    update as well.
+  - All this sounds like a good Coq exercise!
+
+Matthias: in 1988 Tom Reps visited Rice and explained, one more time,
+something about the program dependence graph. Fortran people
+desperately tried to go the other way; they had a control graph (CFG)
+and a data-dependency graph (DDG), and they merged it into a Program
+Dependence Graph, that represented the Fortran program as a functional
+program with mutable array updates.
+
+Tom tried to do proofs, and while presenting them everybody fell
+asleep. The proofs were not pleasant. We thought, maybe we can do
+better!
+
+The semantics of a language P maps program execution to store
+transformations. You can decompose it into first a transformation into
+an intermediate representation P', another programming language, and
+then its store semantics.
+
+As an intermediate representation P', I chose the infinite unrolling
+of Fortran: unroll all the while-loops of the program, you get
+a rational tree, if you label them node trees the way Mitch did, you
+get back a finite representation, the program dependence graph
+(almost); we called it the "semantic program dependence graph", as it
+wasn't exactly the same.
+
+We circulated a manuscript to them in which we pointed out that their
+compiler were all incorrect. In their compiler, if you had
+
+  y = t1
+  [...]
+  y = t2
+  [...]
+  use(y)
+
+they would always drop (t1) as it was useless if there was no use-of-y
+between t1 and t2. But this was wrong if t1 contained an error, for
+example a division-by-zero.
+
+In 1998, a guy called Zadeck showed up. (Jan: was he at IBM at this
+time? Matthias: yes.) He came to my office and told me that I, the
+theoretical guy, should stay out of compilers as I polluting their
+field. It turned out that the semantic PDG was exactly the same as
+SSA. Of course, I stayed away from Fortran compilers.
+
+We, mathematicians, are a strange civilization that landed on the
+planet of compiler design and optimization, and we were sending
+messages into the future. If we don't change our message, they can't
+interact with it.
+
+Sometimes we in the field of mathematical compilers discover ideas
+that are ahead of what they have. We were 1.5 years ahead of these
+guys, we didn't know. Everybody made fun of us that the semantics PDG
+was just correct, who cares?
+
+We, mathematics, are a strange civilization, and it is our job to
+figure out how to bridge that gap with other people.
+
