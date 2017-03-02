@@ -14,17 +14,17 @@ Key properties:
 
 ### Syntax
 
-    Expressions  e := ... | fork e | ref e | e←e | !e | sync e e | sync ℓ→v,q e | await | signal | ℓ
+    Expressions  e := ... | fork e | ref e | e←e | !e | sync e e | sync ℓ→(v,q) e | await | signal | ℓ
     Values     v,w := ... | ℓ
 
     Proc. tab. p,q := e | q|q
-    Stores       σ := · | ℓ→v,q | σ;σ
-    Machines     M := <q,σ>
+    Stores       σ := · | ℓ→(v,q) | σ;σ
+    Machines     M := <q # σ>
 
-    Expr ctxt    E := ... | ref E | E←e | ℓ←E | !E | sync E e | sync ℓ→v,q E
+    Expr ctxt    E := ... | ref E | E←e | ℓ←E | !E | sync E e | sync ℓ→(v,q) E
 
 Programs are those `e` that are closed and mention neither any `ℓ` nor
-any use of `sync ℓ→v,q e`.
+any use of `sync ℓ→(v,q) e`.
 
 Given a program `e`, the starting machine state is just `<e,·>`.
 
@@ -39,22 +39,22 @@ Structural equivalence `≡` over machines includes:
 
 Read the following reduction rules as quotiented by `≡`.
 
-    base    e ↪ e'  ⇒  <p|E[e],σ> → <p|E[e'],σ>
+    base    e ↪ e'  ⇒  <p|E[e] # σ> → <p|E[e'] # σ>
 
-    fork    <p|E[fork e],σ> → <p|E[0]|e,σ>
+    fork    <p|E[fork e] # σ> → <p|E[0]|e # σ>
 
-    ref     <p|E[ref v],σ> → <p|E[ℓ],σ;ℓ→v,·>    where ℓ fresh
+    ref     <p|E[ref v] # σ> → <p|E[ℓ] # σ;ℓ→(v,·)>    where ℓ fresh
 
-    lock    <p|E[sync ℓ e],σ;ℓ→v,q> → <p|E[sync ℓ→v,q e],σ>
-    unlock  <p|E[sync ℓ→v,q w],σ> → <p|E[w],σ;ℓ→v,q>
+    lock    <p|E[sync ℓ e] # σ;ℓ→(v,q)> → <p|E[sync ℓ→(v,q) e] # σ>
+    unlock  <p|E[sync ℓ→(v,q) w] # σ> → <p|E[w] # σ;ℓ→(v,q)>
 
-    await   <p|E[sync ℓ→v,q E'[await]],σ> → <p,σ;ℓ→v,q|E[sync ℓ E'[0]]>
-    signal  <p|E[sync ℓ→v,q E'[signal]],σ> → <p|E[sync ℓ→v,· E'[0]]|q,σ>
+    await   <p|E[sync ℓ→(v,q) E'[await]] # σ> → <p # σ;ℓ→(v,q)|E[sync ℓ E'[0]]>
+    signal  <p|E[sync ℓ→(v,q) E'[signal]] # σ> → <p|E[sync ℓ→(v,·) E'[0]]|q # σ>
 
-    write   <p|E[sync ℓ→v,q E'[ℓ←w]],σ> → <p|E[sync ℓ→w,q E'[ℓ]],σ>
-    read    <p|E[sync ℓ→v,q E'[!ℓ]],σ> → <p|E[sync ℓ→w,q E'[v]],σ>
+    write   <p|E[sync ℓ→(v,q) E'[ℓ←w]] # σ> → <p|E[sync ℓ→(w,q) E'[ℓ]] # σ>
+    read    <p|E[sync ℓ→(v,q) E'[!ℓ]] # σ> → <p|E[sync ℓ→(w,q) E'[v]] # σ>
 
-    nest    <p|E[sync ℓ→v,q E'[sync ℓ e]],σ> → <p|E[sync ℓ→v,q E'[e]],σ>
+    nest    <p|E[sync ℓ→(v,q) E'[sync ℓ e]] # σ> → <p|E[sync ℓ→(v,q) E'[e]] # σ>
 
 ### Examples
 
