@@ -26,7 +26,7 @@ Key properties:
 Programs are those `e` that are closed and mention neither any `ℓ` nor
 any use of `sync ℓ→(v,q) e`.
 
-Given a program `e`, the starting machine state is just `<e,·>`.
+Given a program `e`, the starting machine state is just `<e # ·>`.
 
 ### Structural Equivalence
 
