@@ -20,7 +20,7 @@ Programming Language Design and Implementation (PLDI), 2000, pages 1-12.
 
 Andreas Gal and Michael Franz
 Incremental Dynamic Code Generation with Trace Trees
-https://www.cs.montana.edu/ross/classes/fall2009/cs550/resources/Tracemonkey-01.pdf
+https://github.com/nuprl/hopl-s2017/raw/master/tracing-jit/Gal06_Trace_Trees.pdf
 Technical Report ICS-TR-06-16, University of California, Irvine, 2006.
 
     The authors implement tracing in a just-in-time compiler (JIT) for Java.
