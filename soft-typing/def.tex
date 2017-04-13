@@ -1,0 +1,29 @@
+\usepackage[colorlinks=true]{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{dashrule}
+\usepackage{tikz}
+\usetikzlibrary{shapes}
+\usepackage{textgreek}
+\usepackage{multicol}
+\usepackage{listings}
+
+\renewcommand{\maketitle}[1]{{%
+\flushleft\textsf{#1 \hfill \today} \\
+\textsf{\hfill Ben Greenman} \\
+\vspace{1mm}
+\hrule
+\vspace{0.4cm}}}
+
+
+\newcommand{\hdash}{{\vspace{1ex}}\hdashrule{\linewidth}{0.2ex}{1em}{\vspace{1ex}}}
+\newcommand{\naturals}{\mathbb{N}}
+
+\newcommand{\localpdf}[2]{#2} % links to local pdfs not working, oh well
+\newcommand{\figref}[1]{Figure~\ref{#1}}
+\newcommand{\secref}[1]{Section~\ref{#1}}
+
+\newtheorem*{theorem}{Theorem}
+
+\newcommand{\qa}[2]{\vspace{2ex}\noindent \textbf{Q.} #1 \newline \noindent \textbf{A.} #2}
