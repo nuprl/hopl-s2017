@@ -1,0 +1,941 @@
+DISCLAIMER:
+These notes are working documents written only to be read by the author.
+They may be inconsistent with themselves.
+They may be written partially in ciphers.
+They may be plainly wrong.
+They are not fit to be read or understood by other people.
+The author takes no responsibility for what may happen if other people try to read or understand
+them.
+Turn back.
+Turn back now.
+
+* Theme
+Leif: Compiling with types (focusing on use for optimization)
+leroy1992 - Unboxed objects and polymorphic typing
+morrisett1995 - Compiling with types
+tarditi1996 - TIL: A Type-Directed Optimizing Compiler for ML
+leroy1998 - An overview of Types in Compilation
+morrisett1998 - From System F to Typed Assembly Language
+
+Me: Compiling with dependent types (focusing on use potential for certifying compilation, and challenges introduced by dependency)
+necula1998 - The design and implementation of a certifying compiler
+barthe1999 - CPS translations and applications: the cube and beyond
+xi2001 - A Dependently Typed Assembly Language
+herbelin2005 - On the degeneracy of $\Sigma$-types in presence of computational classical logic
+chen2010 - Type-preserving Compilation of End-to-end Verification of Security Enforcement
+* Outline
+- Setting the stage: overview of several branches/themes of research (and 1 of non-research) and show where this theme fits in.
+  Branch 1: Type-preserving compilation: picking up from Leif's presentation, which shows a history of
+            types + compilation and ends with type-preserving compilation down to assembly.
+  Branch 2: Dependent type theory: types rich enough to express near arbitrary correctness criteria.
+  Branch 3: An idea from industry: large engineering projects need to be auditable.
+
+  Branch 1 and 3 come together into the idea of certifying compilation---a compiler that generates
+  proofs that it produces the "correct" result.
+- What is and why do we want a certifying compiler? "The Design and Implementation of a Certifying Compiler".
+
+  What is a certifying compiler, what does it give you, how do you build one?
+  End by introducing branch 2: discussing why you want you might want to use dependently typed languages to realize a
+  certifying compiler, although there are other ways.
+- What does a typed assembly language look like and give us? Discuss "A Dependently Typed Assembly Language"
+
+  If we had a dependently typed assembly, we could do certifying compilation as type-preserving
+  compilation.
+  "Dependently" typed. Present language, discover what guarantees this language gives you, and what
+  guarantees you don't get.
+- How do we start compiling dependent types to assembly? Discuss "CPS Translating Inductive and
+  Coinductive Types"
+
+  Now in the intersection of branches 1 and 2: can we do dependent-type preserving compilation?
+  In this paper, we do a simple test case. Get high-level dependently typed code into CPS form so we
+  can move to assembly. While CPS and type-preserving compilation has been well-studied, this paper
+  shows that work does not scale to dependent types.
+  Discuss this failure and what that could mean for type preserving compilation for dependent types.
+- Can we avoid CPS or is this a fundamental problem? Discuss "On the degeneracy of Σ types in the presence of computational classical logic"
+
+  Exploring the negative result.
+  This paper tells us somewhat more than the prior paper: not only does CPS not work, if our language
+  has (or can realize) call/cc in the presence of Σ types, then our proofs are meaningless.
+  If we plan to get to assembly, which has pretty arbitrary control flow (and hence call/cc), then we
+  have a problem.
+  Discuss why it fails and if/how to recover consistency.
+- Doing it anyway. Discuss "Type-preserving compilation of end-to-end verification of security enforcement"
+
+  Now in the intersection of branches 1--3: certifying compilation via dependent type-preserving compilation.
+  So we just got done showing type-preserving compilation doesn't scale to dependent types.
+  This paper gives a type-preserving compiler from the Fine language (refinement types, plus other
+  things) to "dependently" typed CIL, the .NET Common Intermediate Language.
+  We'll consider how they do the impossible (hint: they don't) and what we can learn.
+* Summary
+Dependent-type preserving compilation.
+
+Consider the task of writing high-assurance software---software costs millions of dollars and/or human
+lives when something goes wrong.
+Many branches of research seek to support developers when writing software that *must* be correct.
+Out of the work on dependent type theory, we have certified compilers that prove they never introduce
+bugs when generating machine code.
+Out of work in program logic, we have frameworks for directly writing low-level code and proving it
+satisfies rich properties.
+These branches feature different strengths and weaknesses, and must compete with industry requirements
+that the software be audited.
+A certified compiler is easy for the programmer to use, but gives few guarantees and is hard to audit.
+A program proven correct with a program logic gives rich guarantees and is easy to audit, but is hard
+to write and prove correct since you must work at a low-level.
+
+Certifying compilation may offer "the best of both worlds".
+The compiler generates a proof that each particular program is compiled correctly, which can be
+audited.
+If the source language allows rich specification of source programs, then this specification is
+preserved.
+This allows the programmer to get richer guarantees than with certified compilation, still reason
+entirely in their source language, and maintain auditability.
+If the source language is rich enough to encode the kind of rich specifications program logics allow,
+then certifying compilation could allow rich specification and guarantees, preserved to the machine
+code, with a certificate that can be easily audited.
+
+Dependently typed programming languages are such a source language.
+Coq, for example, has been used to implement program logics for machine-like languages.
+If we wish to preserve rich specifications from a high-level language like Coq to the machine
+language, we first need to extend type-preserving compilation to dependently typed language.
+
+Unfortunately, work on type-preserving compilation for dependent types has not been promising.
+Attempts to add dependent types to low-level languages have not progressed beyond
+index types for assembly, or refinement types for virtual machine languages.
+These allow some specifications to be preserved to the low-level, but not enough to support certifying
+compilation.
+Worse still, some work shows that common compilers passes like CPS, and control-flow features like
+call/cc, are inconsistent with "full" dependent types.
+
+Still, there has been some recent work implements type-preserving compilation to get end-to-end
+security guarantees, so maybe all hope is not lost.
+
+* Motivation
+For the duration of this lecture, we are engineers that build high-assurance systems.
+We build cryptographic communication software for the military.
+We write software that controls space craft, and want to make sure the booster rocket isn't going to
+detach mid take off, or think it's 5000m below the surface when it's trying to land.
+We design programs for controlling radiation therapy lasers.
+
+Let's see what we have to work with.
+* History
+(Dependent) Type Theory branch:
+- Martin-Löf 73, was a bit obsessed with formalizing human intuition, and grounding all math and logic
+  in it. Came up with type theory. Then he moved on to formalizing quantum physics in type theory.
+- Coquand, 70ish, cared about proof, and programs.
+- Coq, Agda, Idris, etc. Write programs and proofs... then extract them to someone else and run them.
+  Have to be careful to ensure extracted program obeys the assumptions under which it was proven correct
+- CompCert; Write C code and compile it, and know it's correct; Using logic to write the compiler that
+  has a proof.
+  Don't have to reason about the assembly since it's "right"
+- CertiCoq; Write your proof and your program and compile it to assembly, correctly. No guarantees
+  when you link; can't write arbitrary assembly.
+
+In this branch: programmer writes program, compiler produces truth and has separate proof that it produces right truth.
+
+Program Logic branch
+- 50. C
+- Some of people realize C is hard to get right
+- Program logics
+- Separation logic
+- Bedrock; write assembly using CIC as a program logic.
+  Have to write the assembly, and also reason about it. Can write and link with arbitrary assembly,
+  with guarantees.
+
+In this branch: Programmer must produce both proof and truth.
+
+Industry branch
+- Industry best practice introduces auditability.
+  Must be able to check/audit all parts of the system. (which is easier to do if you have an artifact
+  to audit)
+
+In this branch: Someone checks truth (which is easier to do when you have, e.g., a valid proof)
+
+Type-preserving compilation branch:
+- Type Preserving Compilation (which Leif talked about)
+
+Convergence point: At some point, several of these branches briefly converge:
+- Proof carrying code. Truth that carries it's proof.
+- Certifying compilation.
+
+In these branches: A compiler preserves truth and proof.
+
+But then it turns out that was hard, and types weren't expressive enough to encode real proofs, so
+they diverge again.
+
+* Annotated bib
+** necula1998
+This work presents a compiler from a type-safe subset of C to optimized assembly, plus a certifier
+that checks the compiled program.
+The certifier either proves that the compiled program is type and memory safe, or produce a
+counterexample.
+The work also demonstrates several advantages over formal verification of a compiler (certified
+compiler), such as reduced proof burden on the compiler writer, simplified testing since the certifier
+produces counterexamples, and support for certifying manually written assembly.
+
+@InProceedings{necula1998,
+  author    = {George C. Necula and Peter Lee},
+  title     = {The design and implementation of a certifying compiler},
+  booktitle = {{PLDI} 1998},
+  year      = {1998},
+  pages     = {333--344},
+  url       = {https://doi.org/10.1145/277650.277752},
+}
+
+** xi2001
+This paper introduces DTAL, and extension of Typed Assembly Language (TAL) with restricted dependent
+types (index types).
+It demonstrates that DTAL supports certain compiler optimizations such as eliminating array bounds
+check and tag checks.
+It also demonstrates how DTAL supports encoding ML and Dependent ML datatypes in the assembly
+language, thus supporting type preserving compilation for indexed types.
+
+@InProceedings{xi2001,
+  author    = {Hongwei Xi and Robert Harper},
+  title     = {A Dependently Typed Assembly Language},
+  booktitle = {{ICFP} 2001},
+  year      = {2001},
+  pages     = {169--180},
+  url       = {http://doi.acm.org/10.1145/507635.507657},
+}
+
+** barthe2002
+This paper extends CPS to a typed λ-calculus with inductive and coinductive types, and to dependently
+typed calculi with non-dependent case analysis.
+It then shows that the standard CPS translation is not possible for Σ-types, and more generally
+inductive types, with dependent case elimination.
+
+@InProceedings{barthe2002,
+  author    = {Gilles Barthe and Tarmo Uustalu},
+  title     = {{CPS} translating inductive and coinductive types},
+  booktitle = {{PEPM} 2002},
+  year      = {2002},
+  pages     = {131--142}
+  url       = {https://doi.org/10.1145%2F503032.503043},
+}
+
+** herbelin2005
+This paper shows that dependent types with strong sums, Σ, and control operators that implement
+classical logic, like call/cc, are inconsistent.
+This implies too that systems with inductive types that can implement Σ-types are inconsistent,
+including Martin-Löf type theory and CIC, Set-predicative or not.
+The paper also analyses the role of the η rule for the control operators, and how to recover consistency in
+limited circumstances.
+
+@InProceedings{herbelin2005,
+  author        = {Hugo Herbelin},
+  title         = {On the degeneracy of $\Sigma$-types in presence of computational classical logic},
+  booktitle     = {International Conference on Typed Lambda Calculi and Applications},
+  year          = {2005},
+  pages         = {209--220},
+  url           = {https://dx.doi.org/10.1007/11417170_16},
+}
+
+** chen2010
+This paper introduces a type-preserving compiler from Fine, a function language with refinement types
+and affine types, to DCIL, which adds restricted dependent types to the .NET Common Intermediate
+Language.
+Fine proofs are compiled to LCF-style proof terms in DCIL.
+By supporting proofs in the target language, the work supports proof-carrying code and auditing.
+
+@InProceedings{chen2010,
+  author    = {Juan Chen and Ravi Chugh and Nikhil Swamy},
+  title     = {Type-preserving Compilation of End-to-end Verification of Security Enforcement},
+  booktitle = {{PLDI} 2010},
+  year      = {2010},
+  pages     = {412--423},
+  url       = {http://doi.acm.org/10.1145/1806596.1806643},
+}
+* (95 / 100 min) Lecture Notes
+** (3 min) Intro: Dependent-Type Preserving Compilation / Certifying Compilation
+*On 4th whiteboard*
+
+Overview of several branches/themes of research (and 1 of non-research) and show where this theme fits in.
+(draw diagram)
+
+Branch 1: Type-preserving compilation: picking up from Leif's presentation, which shows a history of
+          types + compilation and ends with type-preserving compilation down to assembly.
+Branch 2: Type Theory: Over in this branch, dependent types came about---types rich enough to express near arbitrary correctness criteria.
+Branch 3: An idea from industry: large engineering projects need to be auditable.
+
+These three ideas merged in 1998 (or so) with the idea of certifying compilation.
+In each of these papers you should be looking for:
+- A type-preserving compiler
+- dependent types
+- auditability
+
+** (26 min) Lecture Notes for necula1998, The design and implementation of a certifying compiler
+*** (1 min) Transition
+Remember:
+Looking for
+- type-preserving compilers
+- dependent types,
+- that allow auditing (certifying) the output.
+
+It therefore shock you to learn that the first dependent type preserving compiler is a compiler
+from C and assembly.
+*** (2 min) Intro and motivation
+*On 1st whiteboard*
+
+- A compiler from type-safe C
+- Highly Optimized Assembly
+- + Certificate that checks type & memory safety of assembly.
+
+Includes certifier that produces either a formal proof of safety, or a counterexample.
+
+Claimed benefits:
+1. It's easier to check the output of a compiler than verify a compiler. The certifier may not need to
+   be changed every time the compiler changes, but the proof of correctness probably does.
+   (this claim is true, but sort of irrelevant. developing a certifier is still hard)
+2. This technique applied to highly optimizing compilers
+   (this claim is nonsense, as I will show)
+3. The certifier drastically improves the effectiveness of compiler testing, since the certifier can signal errors
+   (this claim is nonsense; a verified compiler need not be tested)
+4. Finally, this approach is a practical way to produce safety proofs for Proof-Carrying Code
+   (this claim is true; this is really the interesting part IMHO)
+
+*** (5 min) Overview of the Touchstone Certifying Compiler
+*On 3rd Whiteboard*
+
+Compiler -> Type Specification
+                               -> Certifier -> Proof/counterexample
+         ->    Annotated Code
+
+- Checking that optimized assembly code is type & memory safe is hard.
+- Compiler emits type spec. + annotations to help.
+- Annotations limited to loop invariants; declare types of live registers + loop invariant
+- type specifications declare calling convention of every function; the types of arguments and result registers
+
+The certifier has 3 parts:
+1. A verification condition generator; takes type spec & annotations from compiler, produces safety
+   predicate (FOL formula).
+2. The prover; solver
+3. The proof checker; proof holds against predicate iff assembly language program is type & memory
+
+Note that the trusted core here is only part 1. and part 3.
+
+**** My comments and thoughts
+1. Already we see a problems with the claims of this design.
+
+   - Hurts claim 1 that we must *modify* compiler to produce type specification and annotations.
+     Essentially must verify compiler is producing well-typed code as we go.
+     Increased development and maintenance costs, although perhaps less than full verification.
+   - Hurts claim 2 since in order to generate type spec/annotations, we might not be able to do
+     certain optimizations.
+
+2. Basically, this design is a type-preserving compiler.
+   Let's recast this design as such:
+
+   - (*On top of 2nd whiteboard*) Source language: Type-safe subset of C (no type or memory errors)
+   - (*On top of 3rd whiteboard*) Target Language: Type-annotated DEC Assembly, where the types are:
+     1. the type specification
+     2. the loop invariants
+     3. the conditions generated by part 1. of the certifier
+
+     Part 2 and 3. of the certifier implement the type checker for the target language.
+   - (*On bottom of 1st whiteboard*) Theorem: If we have a well-typed C-subset program, then the
+     compiler produces a well-typed DEC Assembly program or a counterexample.
+
+   Note that it's note *quite* type-preservation, but pretty close, particularly considering they
+   didn't set out to verify anything.
+*** (5 min) The Source Language
+*On 2nd whiteboard*
+
+"type-safe" subset of "C":
+includes:
+- All array subscripting operations are implicitly bounds checked
+  i.e. [ ] : Array(A, Len) -> Index : Int -> if Index < Len then A else Error
+  See, this variant of C is dependently typed.
+- arrays (including multi-dimensional) are actually vectors, i.e., a pair of a length and a base address
+- boolean are separate
+- Java-style exceptions and handling
+- dynamic heap allocation of data structures (unlike TAL)
+
+excludes:
+- recursive data structures
+- function pointers
+- floats
+- dynamic stack allocation of data structures
+- casts
+- address-of
+- pointer arithmetic
+- explicit deallocation (hence, this "C" is garbage collected)
+
+Example program:
+
+int sum (int a[]) {
+  int i, s = 0;
+  for (i=0;i<length(a);i++){
+    s += a[i];
+  }
+  return s;
+}
+
+*** (10 min) ~Design Details of the Certifier~ The Target Language
+*Erase and use 3rd whiteboard*
+
+At this point the paper discusses the certifier, and that the ceritifer establishes the
+required interface for the type-specifciation and type annotations.
+So I'm going to put our type-preserving compilation goggles on and show this as the target language:
+
+Remember, target language programs are a 4-tuples:
+  (Annotated Asm; Type Spec; Safety Pred; Proof)
+
+The annotated assembly mostly looks like assembly, but has loop invariants:
+
+  Inv ::= ANN_INV(P, {x1, ..., xk})
+
+The Type spec just lists the pre/post conditions of functions.
+
+  Spec ::= f : (Pre = P, Post = P)
+
+The safety pred is a first-order logic formula.
+
+  P ::= true | P /\ P | P => P | ∀x. P | e = e | e : t | ...
+
+x ranges of registers, e includes integer and array operations, t includes simple types
+
+Here are a few type rules (turn styles added for your benefit):
+
+[⊢ P] (P is valid)
+
+
+⊢ e : array(t, l)   ⊢ 0 <= i < l
+--------------------------------------
+        ⊢ saferd(e+4*i)
+
+(arrays can only use base types, hence each element has size 4 bytes)
+
+[⊢ e : t] (e has type t)
+
+e : array(t, l)    ⊢ 0 <= i < l
+-------------------------------------
+        ⊢ sel(m, e+4*i) : t
+
+-------------
+⊢ true : bool
+
+
+Here's the translation of the example:
+
+(main: mov zero, v0
+       mov zero, t0
+ L1:  ANN_INV(v0 : int /\ t0 >= 0,{t0,t1,v0})
+      subl t0,a1,t1
+      bge t1,L2
+      s4addl t0,a0,t1
+      addl t0,1,t0
+      ldl t1,0(t1)
+      addl t1,v0,v0
+      br L1
+ L2: ret;
+
+main : (Pre = a0 : array(int,a1) /\ a1 >= 1, Post = v0 : int);
+
+∀ a0,a1,rm.
+  a0 : array(int,a1) /\ a1 >= 1) =>
+  (0 : int /\ 0 >= 0) /\
+  (∀ t0,t1,v0.
+    (v0 : int /\ t0 >= 0) =>
+      ((t0 - a1 >= 0) => v0 : int) /\
+      ((t0 - a1 < 0) =>
+        (saferd(a0 + 4 * t0) /\
+        t0 + 1 >= 0 /\
+        v+ + sel(rm, a0 + 4 * t0) : int))))
+
+And then run the prover to generate the proof.
+
+*** (3 min) ~The Prover and Proof Checker~ Type-Preservation
+In paper:
+"The theorem prover is guaranteed to be able to prove the safety predicate automatically because these
+predicates are implicitly proven by the compiler itself during compilation. ...
+Thus, it is enough for the theorem prover to be ''as good'' at proving ... as the compiler is."
+
+So compiler will never produce code that the certifier fails to certify:
+Let's modify our theorem:
+
+(*Erase on bottom of 1st board*)
+Theorem: If we have a well-typed C-subset program, then the compiler produces a well-typed DEC Assembly program~ or a counterexample.~
+
+Also:
+- safety predicate is a type in LF,
+- proof is a program in LF
+- proof checker is a the LF type-checker.
+
+LF is a dependent type system.
+By using a dependent type system, they are able to have dynamic array allocation and do array bounds
+check elimination.
+TAL could not support dynamic array
+allocation, since the type system was not rich enough to ensure safe accessing.
+The dependent types allow encoding additional constraints that depend on runtime values, allowing
+richer guarantee from type-preservation.
+
+In a very convincing sense, this is the first work on dependent-type preserving compilation.
+- dependent types are computed from the base C types and implicit array bounds checks (expressions).
+- preserved into the type of an assembly program
+- guarantee that the compiler produces well-typed code.
+
+BUT THIS IS A PLDI PAPER ABOUT HARDCORE OPTIMIZING COMPILERS MOVING RIGHT ALONG TO BENCHMARKS.
+
+*** (0 min) OPTIMIZATIONS AND BENCHMARKS
+(*IN CAPS ON 1st BOARD*)
+OPTIMIZATIONS AND BENCHMARKS
+
+(I'm not going to talk about benchmarks; this is a talk about dependent types.)
+** (37 min) Lecture Notes for xi2001, A ~Dependently~ Index Typed assembly Language
+*** (1 min) Transition
+*No board, all speech*
+
+Previous paper:
+- with a lot of effort, large certificates, able to do certifying compilation and optimizations and get memory safety.
+- but trusted code base:
+  1. type specification
+  2. annotations
+  3. verification condition generater
+  4. proof checker
+- required solver for proofs
+
+Suppose we want to shrink out trusted code base.
+
+Instead of a "program logic" type system, where we produce logic formulas that describe the program
+we could use a syntactic type theory like TAL's that can rule out memory safety errors and
+still admit array optimizations.
+
+Then the only thing in the trusted core is the type checker.
+
+*** (3 min) Intro and Motivation
+(*On 1st board*)
+NB:
+- Index Typed Assembly, not DTAL.
+Types can refer to static indices of type Integer, and perform simple computations over Integers, such as
+addition, multiplication, and comparison.
+It is Index Typed; it has a (small) separate language of type-level computations called the index language.
+
+- enriches TAL by enabling safe arrays
+- plus array bounds checking elimination
+
+This paper is directly motivated TAL, and the Touchstone cerifying compilation.
+It aims to provide a target language in which type-safety also includes memory safety, so that
+type-checking guarnatees memory safety, and also support optimizing compilers.
+
+The goals and claims of this paper:
+1. Generalize TAL to supports certain significant optimizations and preserve type soundness.
+~2. A method for compiling user defined types in DML to assmebly.~
+3. Provide support for certification (as in, certified compilation) based on type-checking
+
+Paper mentions one challenge that I won't discuss until next paper:
+~1. How do we represent Π n:nat. List(A, n) -> List(A, n) in assembly?~
+2. How do we do control flow in assembly that involves dependent types?
+
+NB: Never let it be said we thought dependent types and assembly-style control flow would work well together.
+
+*** (20 min) ~DTAL~ ITAL
+(*Try to keep on 2nd board*)
+Top down:
+
+**** (2 min) Form of Typing Judgments:
+(*On bottom of 1st board*)
+
+[⊢ P] the program P is well-typed
+[⊢_Λ B] the block B is well-typed
+
+[Φ;Δ;R ⊢_Λ v : τ] the value v is type τ under some variant typing contexts
+[Φ;Δ;R ⊢_Λ I] the sequence of instructions I is well-typed τ under etc.
+
+Λ is invariant under all typing judgments, so I'll omit it from now on.
+**** (10 min) Syntax
+(*On top of 2nd board*)
+
+Type vars: α, Index vars: a, Labels: l
+
+| Programs         | P   | ::= | l₁ : B₁; ...; lₙ;Bₙ                                                                                     |
+| Blocks           | B   | ::= | λΔ.λΦ(R,I)                                                                                              |
+| Label Context    | Λ   | ::= | {l:σ, ...}                                                                                              |
+| Type Var context | Δ   | ::= | · ∣ Δ,α                                                                                                 |
+| Register File    | R   | ::= | [r:τ ...]                                                                                               |
+| ---------------- | -   | --- | ------------------------------------------------------------------------------------------------------- |
+| Instruction Seq  | I   | ::= | jmp v ∣ halt ∣ ins;I                                                                                    |
+| Instructions     | ins | ::= | aop r_d,rₛ,v ∣ bop r,v ∣ arraysize r_d,rₛ ∣ newarray[t] r,r,r ∣ store r_d(v),vₛ ∣ load r_d,rₛ(v) ∣ .... |
+| Values           | v   | ::= | c ∣ r                                                                                                   |
+| Constants        | c   | ::= | () ∣ i ∣ l                                                                                              |
+| Integers         | i   | ::= | ... ∣ -1 ∣ 0 ∣ 1 ∣ ...                                                                                  |
+| Types            | τ   | ::= | α ∣ σ ∣ top ∣ unit ∣ int(x) ∣ τ array(x) ∣ ∃Φ.τ                                                         |
+| State Type       | σ   | ::= | state(λΔ.λΦ.R)                                                                                          |
+| ---------------- | -   | --- | ------------------------------------------------------------------------------------------------------- |
+| Index Context    | Φ   | ::= | · ∣ Φ,α:γ ∣ Φ,A                                                                                         |
+| Index Sorts      | γ   | ::= | int ∣ {α:γ ∣ A}                                                                                         |
+| Index Props.     | A   | ::= | x < y ∣ x ≤ y ∣ x = y ... ∣ ¬P ∣ P₁ /\ P₂ ∣ ...                                                         |
+| Index Exprs      | x,y | ::= | a ∣ i ∣ x + y ∣ x - y ∣ x * y ∣ x ÷ y                                                                   |
+
+**** (0 min) Dynamic semantics
+I submit to you that we can define eval for this language in a sensible and rather obvious way
+**** (8 min) Static semantics
+(*on bottom of 2nd board*)
+
+I'm only going to give you enough rule to type-check an example.
+
+Let's start with some warm up rules:
+
+[Φ;Δ;R ⊢ v : τ]
+
+------------------
+Φ;Δ;R ⊢ () : unit
+
+   r : τ ∈ R
+------------------
+Φ;Δ;R ⊢ r : τ
+
+That was easy.
+
+Let's see some index types:
+
+------------------
+Φ;Δ;R ⊢ i : int(i)
+
+Now instructions:
+
+[Φ;Δ;R ⊢ I]
+
+Φ;Δ;R ⊢ rₛ : int(x)   Φ;Δ;R ⊢ v : int(y)   Φ;Δ;R[r_d : int(x + y)] ⊢ I
+----------------------------------------------------------------------
+                   Φ;Δ;R ⊢ add r_d,rₛ,v;I
+
+Now we have some dependency. r_d has type int, such that the int is equal to x + y, where x and y are the values of r_s and v.
+(of course we could do modular arithmatic over machine integers instead, but that's just noise.)
+
+Okay, time for arrays:
+
+Φ;Δ;R ⊢ r' : int(x)   Φ ⊩ x ≥ 0   Φ;Δ;R ⊢ r'' : τ    Φ;Δ;R[r : τ array(x)] ⊢ I
+----------------------------------------------------------------------
+                   Φ;Δ;R ⊢ newarray[τ] r,r',r''; I
+
+When we initalize a new array, we must give it's size as r', which must have type int(x).
+We must be able to prove under the current index context that the index x is non-negative.
+For simplicity, we initalize all elements of the array to r''.
+Recall that TAL deals with uninitialized memory, so we could easily do that, but we're focusing on
+array bounds checking.
+Finally, r has type τ array(x): an array whose length is x.
+
+Now store.
+
+Φ;Δ;R ⊢ r_d : τ array(x)   Φ;Δ;R ⊢ v : int(y)    Φ ⊩ 0 ≤ y < x    Φ;Δ;R ⊢ vₛ : τ    Φ;Δ;R ⊢ I
+-------------------------------------------------------------------------------------------
+                         Φ;Δ;R ⊢ store r_d(v),vₛ; I
+
+We can only store when r_d contains an array of length x, the index v is an int equal to y, y is
+between 0 and the length of the array, and v_s has the same type as that of the array.
+So we can't store past the end (or before the beginning) of an array.
+
+Φ;Δ;R ⊢ rₛ : τ array(x)   Φ;Δ;R ⊢ v : int(y)    Φ ⊩ 0 ≤ y < x    Φ;Δ;R[r_d : τ] ⊢ I
+-----------------------------------------------------------------------------------
+                         Φ;Δ;R ⊢ load r_d, rₛ(v); I
+
+Similarly, when loading, rₛ must be an array of length x, and v must be an index equal to y, and y
+must be between 0 and the length of the array x.
+Then the rest of the instructions are checked with r_d having type τ, the type of the elements of the array.
+So we can't load past the end (or before the beginning) of an array.
+
+*** (10 min) Example
+(*On 3rd board*)
+
+In Touchstone, we had this:
+
+main: mov zero, v0
+      mov zero, t0
+L1:  ANN_INV(v0 : int /\ t0 >= 0,{t0,t1,v0})
+     subl t0,a1,t1
+     bge t1,L2
+     s4addl t0,a0,t1
+     addl t0,1,t0
+     ldl t1,0(t1)
+     addl t1,v0,v0
+     br L1
+L2: ret
+
+Plus a type spec, plus a VCGen to generate a safety property, plus a prover.
+
+In ITAL, we can write this as
+
+main: λ·.λ(x:int).(a0 : int array(x), a1 : int(x), x ≥ 1)
+      mov v0, 0
+      mov t0, 0
+L1:  λ·.λ(x:int, y:int).
+         (a0 : int array(x), a1 : int(x), x ≥ 1, v0 : int(x), t0 : int(y), y ≥ 0)
+     sub t1,t0,a1    # t1 : int(y - x), i.e., i - length(a)
+     bge t1,L2       # t1 >= 0, go to L2.
+     addl t0,1,t0    # t0 : int(y + 1), and since we did not branch, we have in context: y - x < 0, trying to load y.
+     load t1,a0(t0)  # a0 has length x, trying to load index y + 1, and we know y - x < 0, so y < x, and y >= 0; load type-checks
+     add1 t1,v0,v0   # bla bla bla
+     jmp L1
+L2: λ·.λ·. ()
+    halt
+
+*** (3 min) Type Soundness
+(*On bottom of 3rd board*)
+
+Now, we get type soundness:
+
+For all programs P in ITAL, if ⊢ P then one of the following holds:
+1. eval(P) = halt
+2. eval(P) diverges
+
+- Probably holds of x86, but
+- holds of TAL
+- BUT ITAL has array abstraction.
+We know we will never read random bits of memory, nor store stuff in random bits of memory.
+
+And:
+- reduced trusted code base, for easier certifying compilation/auditability. Only trust the type checker.
+  We do not need to consider the compiler, which produces the type specification and
+  annotations, nor the verification condition generator, nor the proof checker.
+  We need only check this theorem, and the type checker.
+- must smaller certificate. Compare to the safety predicate, plus types, plus loop invariants produced by Touchstone
+** (27 min) Lecture Notes for barthe2002, CPS translating inductive and coinductive types
+*** (1 min) Transition
+Suppose we want:
+- Certifying compilation
+- more than memory safety; e.g., security properties like passwords are always zeroed out before
+  returning from a certain function.
+
+Index types aren't enough for that; we need ``full-spectrum'' dependent types.
+
+But can we preserve ``full-spectrum'' dependent types to assembly?
+Let's take a representative compiler pass and try.
+Olin, what's your favorite compiler pass?
+CPS! Great suggestion.
+
+*** (1 min) Intro and Motivation
+The motivation for this paper is a bit like mustard watches:
+1. Well-known fact: CPS is useful as an IR.
+2. Also well-known fact: inductive and coinductive types are useful in programming languages.
+
+They show the translation is type preserving.
+They then generalize to dependent types, and discover that CPS fails in the presence of strong dependent pairs (Σ).
+
+I'm going to skip the simply typed stuff and the inductive type stuff, and go straight into dependent types.
+I'll start with CC, then add dependent pairs.
+I'll show the double negation call-by-name CPS translation of CC is type-preserving, but when we add
+dependent pairs, it fails.
+
+If you care, I assert to you that you can build inductive types with strong dependent pairs, sums with
+dependent pattern matching, and recursive types.
+
+*** (10 min) CC
+**** (5 min) Syntax
+(*On 1st whiteboard*)
+| Terms/Types | e,t | ::= | Typeᵢ ∣ x ∣ λ x:t.e ∣ e e ∣ Π x:t.t |
+
+I could throw in more things, but this is all we need to study type-preserving CPS.
+
+But actually, to do CPS, it's handy to make some more syntactic distinctions.
+
+| Terms | e | ::= | x ∣ λ x:t.e ∣ λ x:A.e ∣ e e ∣ e A                     |
+| Types | A | ::= | α ∣ λ x:A.A ∣ λ α:κ.A ∣ A e ∣ A A ∣ Π x:A.A ∣ Π α:κ.A |
+| Kinds | κ | ::= | Typeᵢ ∣ Π x:A.κ ∣ Π α:κ.κ                             |
+
+Trust me when I say it is decidable to convert a well-typed term from the first syntax into the second.
+
+**** (5 min) Static Semantics
+(*On rest of 1st whiteboard*)
+
+I'm going to use the first syntax for these, as I hope it's perfectly clear that using the second syntax just means duplicating most of these rules 4 times.
+
+[Γ ⊢ e : t]
+
+Warm up rules:
+
+x : t ∈ Γ
+---------
+Γ ⊢ x : t
+
+j = i + 1
+-----------------
+Γ ⊢ Typeᵢ : Typeⱼ
+
+
+Some unsurprising rules:
+
+Γ ⊢ t₁ : Typeᵢ
+Γ,x:t₁ ⊢ t₂ : Typeⱼ
+---------------------
+Γ ⊢ Π x:t₁.t₂ : Type_max(i,j)
+
+(don't worry about the subscripts on Type)
+
+Γ ⊢ t₁ : Typeᵢ
+Γ,x:t₁ ⊢ e : t₂
+------------------------
+Γ ⊢ λ x:t₁.e : Π x:t₁.t₂
+
+
+An interesting rule
+
+Γ ⊢ e : Π x:t'.t
+Γ ⊢ e' : t'
+--------------------
+Γ ⊢ e e' : t[e'/x]
+
+Like. Whoa. I put a term in a type. Can we all handle that?
+
+
+And some book keeping
+
+Γ ⊢ e : t'
+Γ ⊢ t' ⊑ t
+---------
+Γ ⊢ e : t
+
+Where subtyping includes equivalence, which is defined by reduction to α-equivalent things.
+
+
+*** (8 min) CPSing CC
+(*On 2nd whiteboard*)
+
+I'm going to use the second syntax for this, because I only want to CPS functions (term λs), not type constructors (type λs).
+Also, because trying to CPS at the type-level is an open problem that I'm working on, and I haven't solved it yet.
+
+We're going to do the double negation translation.
+I'll define two translations: the + translation (roughly, the type translation) and the ÷ translation (roughly, the term translation)
+
+I'm adapting this presentation from the work of Nick Rioux, who adapted it from this paper.
+
+There are several judgments:
+[Γ ⊢ A : κ -÷> A]
+For short: A÷ = A' s.t. Γ ⊢ A : κ -÷> A'
+
+[Γ ⊢ κ -+> κ]
+For short: κ+ = κ' s.t. Γ ⊢ κ -+> κ
+etc.
+
+
+[Γ ⊢ A : κ -÷> A] (÷ translation of a type; the double negation translation)
+
+  ----------------------
+  Γ ⊢ A : Typeᵢ -÷> ¬¬A+
+
+
+[Γ ⊢ κ -+> κ] (kind translation; just congruence rules)
+
+  -------------------
+  Γ ⊢ Typeᵢ -+> Typeᵢ
+
+  ---------------------------
+  Γ ⊢ Π x:A.κ -+> Π x:A+.κ+
+
+  ...
+
+
+  [Γ ⊢ A : κ -+> A] (+ type translation; just congruence rules)
+
+  ---------------
+  Γ ⊢ α : κ -+> α
+
+  ------------------------------------
+  Γ ⊢ (λ x:A.B) : Π x:A.κ -+> λ x:A÷.B+
+
+  -------------------------------------------
+         Γ ⊢ (A e) : κ[e/x] -+> A+ e÷
+
+  ...
+
+
+[Γ ⊢ e : A -÷> e] (÷ term translation; CPS translation of terms)
+
+For short: e÷ = e' s.t. Γ ⊢ e : A -÷> e'
+
+  x : A ∈ Γ
+  ---------------
+  Γ ⊢ x : A -÷> x
+
+  ----------------------------------------------------------
+  Γ ⊢ (λ x:A.e) : Π x:A.B -÷> λ k:¬(Π x:A.B)+. k (λ x:A÷.e÷)
+
+  Let's convince ourself this is type preserving:
+
+  We want the CPS translation to have type ¬¬(Π x:A.B)+ = ¬(Π x:A.B)+ -> False
+  So the translation must be a function (check) that takes a continuation of the right type (check),
+  and returns false (presumably, by calling the continuation on the right thing) (check and check).
+
+  All convinced? Now application:
+
+  ---------------------------------------------------------------------
+  Γ ⊢ e e' : A[e'/x] -÷> λ k:¬(A[e'/x])+. e÷ (λ n:(Π x:A'.A)+. n e'÷ k)
+
+  We want the CPS translation to have type ¬¬(A[e'/x])+ = ¬(A[e'/x])+ -> False
+  So the translation must be a function (check) that takes a continuation of the right type (check),
+  and returns False.
+  It's not immediately clear that we'll return False, so let's go type-check the body:
+
+  e÷ : ¬(Π x:A'.A)+ -> False, so it suffices to show that
+  (λ n:(Π x:A'.A)+. n e'÷ k) has type (Π x:A'.A)+ -> False
+  e'÷ has type A'÷, so n e'÷ : A÷[e'÷/x],
+
+  Is that a function that accepts a ¬(A[e'/x])+ and returns False, i.e, is
+  A÷[e'÷/x] = ¬(A[e'/x])+ -> False = ¬¬(A[e'/x])+
+  Well, clearly it's ¬¬A+[e'÷/x] (since A÷ = ¬¬A+)
+  So we need A+[e'÷/x] = (A[e'/x])+.
+
+  This is not exactly obvious, but Barthe and Uustalu give a proof, and also Nick did the proof using
+  his reformulation that this presentation is based on.
+  So we have reason to believe it's true.
+
+  Great, type preservation done for CC.
+
+*** (3 min) Adding Σ
+(*Modify 1st whiteboard*)
+
+| Terms/Types | e,t | ::= | .... ∣ Σ x:t.t ∣ fst e ∣ snd e |
+
+Γ ⊢ A : Typeᵢ
+Γ,x:A ⊢ B : Typeⱼ
+------------------
+Γ ⊢ Σ x:A.B : Type_max(i,j)
+
+Γ ⊢ e : Σ x:A.B
+----------------
+ Γ ⊢ fst e : A
+
+   Γ ⊢ e : Σ x:A.B
+----------------------
+Γ ⊢ snd e : B[fst e/x]
+
+*** (4 min) CPSing Σ
+(*On 3rd whiteboard*)
+
+---------------------------------------------------------------------------------------
+Γ ⊢ snd e : B[fst e/x] -÷> λ k:¬(B[fst e/x])+. e÷ (λ n:(Σ:A÷.B÷). let y = snd n in y k)
+
+Okay. Is this the right CPS? Is it type-preserving?
+CPS translate a pair, take a continuation of the right type, apply the pair to a continuation that
+does the projection and applies the second component to the continuation.
+
+Let's look more carefully.
+  k : ¬(B[fst e/x])+
+  y : ¬(B[fst n/x])+ -> False
+
+y k is not well-typed, since we don't know fst e = fst n.
+Our continuation expects to receive a *specific* pair, but CPS creates a type that only promises *some* pair.
+
+So experiment failed; dependent type-preserving compilation does not work for CPS in the presence of
+strong dependent pairs.
+
+** (2 min) Lecture Notes for herbelin2005, On the degeneracy of Σ-types in presence of computational classical logic
+This paper, and several others along this research line, show that it's more than just CPS and Σ.
+Actually, it's computational classical logic and dependent elimination of negative types.
+So call/cc and Σ don't work; CPS and inductive types with dependent pattern matching don't work.
+call-by-value CPS and dependent function application don't work.
+
+That's about all that time I have to talk about this paper.
+
+** (5 min) Lecture Notes for chen2010, Type-preserving Compilation of End-to-end Verification of Security Enforcement
+*** Intro and Motivation
+This paper is much closer to necula1998 in spirit, if not in time.
+
+They develop a compiler from Fine, a .NET language with refinement types (a restricted form of
+dependent types that is more than just index types, but less than CC), to a refinement typed variant
+of the CIL, called DCIL.
+They use LCF proof terms to represent certificates, similar to Touchstone's use of a separate LF proof
+of the safety predicate.
+This work allows the certified programs to be linked with other .NET programs.
+
+This significantly increases code size, as we saw when comparing Touchstone to ITAL, but the
+certificates can prove more theorems than ITAL.
