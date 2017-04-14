@@ -3,14 +3,715 @@
 \begin{document}
 \maketitle{Soft Typing}
 
+\newcommand{\todo}[1]{\textbf{TODO: #1}}
+
 \begin{abstract}
 Lecture notes, April 14th, \href{http://www.ccs.neu.edu/home/matthias/7480-s17/index.html}{HOPL 2017}.
+Don't mind the ornaments.
 \end{abstract}
 
-\subsection*{Soft Typing}
+\subsection*{Soft Typing: Philosophy and Motivation}
 
-TBA~\cite{f-thesis-1991}
+\begin{quote}
+``\ldots the computer \ldots is willing to accept almost any sequence of
+  instructions and make sense of them at its own level.
+  That is the secret of the power, flexibility, and even reliability of computer
+  hardware, and should therefore be cherished.'' --- Tony Hoare~\cite{h-dtic-1973}
+\end{quote}
 
+% TODO change margins on these lists, or on the text. Looks bad
+\noindent \aldine~Static type systems have well-known benefits.
+\begin{enumerate}
+\item
+  A static type system can catch programming errors early (typos, logical mistakes),
+  and exhaustively\textemdash by exploring all paths through the program.
+\item
+  Type signatures are a useful form of documentation.
+\item
+  Optimizing compilers can use type information to compile more efficient
+  code.\footnote{How useful is compiling with types? This was the subject of two HOPL talks in March, see:
+                 \url{https://github.com/nuprl/hopl-s2017/blob/master/lecture_notes/2017-03-24.md} and
+                 \url{https://github.com/nuprl/hopl-s2017/blob/master/lecture_notes/2017-03-28.md}.}
+\item
+  Designing types first can help guide the design of programs.
+\end{enumerate}
+
+\noindent \bomb~Dynamic typing also has well-known benefits.
+\begin{enumerate}
+\item
+  Unlike untyped languages, dynamically typed languages guarantee safety from
+  memory errors (e.g. segfaults).
+\item
+  A dynamically typed language will run any syntactically correct program.
+\item
+  (consequence of point 2) Dynamically typed functions can be re-used on
+  a larger class of arguments.
+\item
+  Dynamic typing is conceptually simpler than static typing; a programmer
+  only needs to understand the runtime behavior of programs, not the behavior
+  of the type checker.
+\end{enumerate}
+
+\noindent \textxswdown~\textbf{Note} to emphasize point 3 above, here is a program by
+Alan Mycroft that cannot be typed in the ML type system~\cite{m-icop-1984}.
+
+% TODO lstlisting
+\begin{verbatim}
+     let rec f(x : structure) = case x of
+       (basecase(y): ...
+       |listcase(y): g(y, (hd, tl, null))
+       |dlistcase(y): g(y, (dhd, dtl, dnull)))
+     and g(x : a, (xhd: a->b, xtl: a->a, xnull: a->bool)) =
+       if xnull(x)
+       then ()
+       else (f(xhd x), g(xtl x, (xhd, xtl, xnull)))
+\end{verbatim}
+
+Mycroft wrote this program while developing the ML compiler.~\textbf{End Note.}
+
+\noindent \danger~Why not combine all the benefits in a single system?
+The dream would be, an ideally-flexible type system that can type check any
+dynamically-typed program.
+\begin{itemize}
+\item
+  Standard typecheckers try to prove that a program is ``good'', for some
+   notion of ``good'' (think: \emph{will not segfault at runtime}).
+  The set of ``good'' programs is almost always recursively enumerable,
+   therefore a \emph{decidable} type checker \textbf{must reject some ``good'' programs}.
+\item
+  Dynamically typed programs tend to rely heavily on untagged unions, recursive
+   types, and structural subtyping.
+  These features make type inference and type checking more difficult.
+  In particular, Curry-style typing assumes that datatypes are disjoint.
+
+  \emph{Philosophy:} the types in a dynamically-typed program come from the
+  \emph{data} in that program.
+  Functions rely heavily on structural subtyping, guided by dynamic type tests.
+\end{itemize}
+
+%% TODO more citations
+One approach to solving this problem is to design a new type system~\cite{m-icop-1984},
+ in the hope that the system can accomodate enough programming idioms to be
+ widely useful.
+
+A second approach is soft typing.
+Given a type environment $\Gamma$ and expression $e$, a soft type checker
+ infers type information in $e$ and rewrites the program to a
+ semantically-equivalent and type-safe program $e'$, which has static type $\tau$.
+
+$$ \Gamma \vdash e \Rightarrow e' : \tau $$
+
+Many more details follow.
+
+
+\subsection*{Design Criteria for a Soft Type Checker}
+
+Fagan's dissertation outlines the design requirements for a soft type checker.
+The following list is adapted from Section 1.1 of the dissertation~\cite{f-thesis-1991}.
+\begin{enumerate}
+\item
+  No syntactically correct programs are excluded (i.e. rejected by the type checker).
+\item
+  Run-time safety is assured by run-time checks if such checks cannot be
+  safely eliminated.
+\item
+  The type checking process must be unobtrusive, where \emph{unobtrusive} is
+  characterized by two principles:
+\subitem \emph{Minimal text principle}
+  The type checking system should function in the absence of
+  programmer-supplied type declarations.
+\subitem \emph{Minimal failure principle}
+  The checker must pass a ``large fraction'' of dynamic programs that will not
+  produce an execution error.
+\end{enumerate}
+
+%% TODO format, somehow
+For example,
+\begin{verbatim}
+     (+ 2 2)
+     ;; no casts
+
+     (+ 2 (lambda (x) x))
+     ;; add cast
+
+     (if #true 2 2)
+     ;; well-typed
+
+     (if #true 2 (lambda (x) x))
+     ;; well-typed, no casts
+
+     (define (flatten tree)
+       (cond
+        [(null? tree)
+         '()]
+        [(pair? tree)
+         (append (flatten (first tree))
+                 (flatten (rest tree)))]
+        [else ;; tree is a list
+         (list tree)]))
+     ;; well-typed, no casts
+\end{verbatim}
+
+\begin{quote}
+  \emph{Any questions on the design criteria? These are important in subtle ways later.}
+\end{quote}
+
+
+\subsection*{Inferring Types from Untyped Code}
+
+Given the design criteria, the obvious challenge is how to infer descriptive
+ types for annotation-free code.
+Hindley-Milner type inference works well for a similar problem in ML programs,
+ so it is a natural place to start looking for a solution.
+
+
+\subsubsection*{Hindley-Milner Type Inference}
+
+Types $\tau$ are disjoint, terms $e$ are the lambda calculus.
+Type schemes $\sigma$ quantify over type variables $\alpha$.
+
+
+\[\begin{array}{l c l}
+  \tau & \coloneq & \alpha \mid \tint \mid \tbool \mid \tau \rightarrow \tau
+\\ e   & \coloneq & x \mid \elam{x}{e} \mid e~e \mid \elet{x = e}{e}
+\\\sigma & \coloneq & \tau \mid \tall{\alpha}{\sigma}
+\\\Gamma & \coloneq & \cdot \mid x\!:\!\sigma,\Gamma
+\\ S & \coloneq & \cdot \mid \alpha\!:\!\sigma,\Gamma
+  \end{array}\]
+
+% TODO accent on Damas name
+Milner and Damas give syntax-directed type checking rules.
+Reading these rules bottom-up and using fresh type variables each time a new
+ type is required yields an efficient inference algorithm (Algorithm W)
+ parameterized by a solver.
+
+Type Checking: \fbox{$\Gamma \vdash e : \tau$}
+\qquad\qquad
+Type Inference: \fbox{$W(\Gamma, e) = (S, \tau)$}
+
+\noindent Algorithm W has useful properties:
+
+\begin{theorem}
+  (soundness) If $W(\Gamma, e) = (S, \tau)$, then $\Gamma\circ S \vdash e : \tau$
+\end{theorem}
+
+\begin{theorem}
+  (completeness) If $\Gamma\circ S_0 \vdash e : \tau_0$ then $W(\Gamma, e) =
+  (S_1, \tau_1)$ and there exists a substitution $S_2$ such that $\Gamma \circ
+  S_0 = \Gamma \circ S_1 \circ S_2$ and $\tau_0 = \tau_1 \circ S_2$ modulo
+  instantiation of quantified type variables in $\tau_0$
+\end{theorem}
+
+\begin{theorem}
+  (principal types) If $W(A,e) = (S,\tau)$ then the generalization
+  of $\tau$ under $\Gamma \circ S$ is a principal type of $e$ under $\Gamma \circ S$.
+\end{theorem}
+
+To summarize, the key ideas with Hindley-Milner are to generate
+ \emph{type equality constraints} from the syntax of the program, then
+ \emph{solve} the type constraints for a most general unifier
+ (using Robinson Resolution).
+
+
+\subsubsection*{Adapting Hindley-Milner}
+
+A non-starter idea is to directly apply the Hindley-Milner rules to dynamically
+ typed programs.
+This is going to fail for many programs; Fagan gives a tautology checker as an
+ example; the {\tt flatten} program from above is another good example:
+
+\begin{verbatim}
+  let rec tautology f =
+    if f == true then true
+    else if f == false then false
+    else (tautology (f true)) and (tautology (f false))
+\end{verbatim}
+
+At a minumum, the type system needs \emph{recursive types} and \emph{untagged unions}.
+%% TODO cites
+The recursive types are not so difficult, but untagged unions mean that datatypes
+ are no longer disjoint.
+In particular, non-disjointness means the type system needs a subtyping judgment;
+ the rule for typing a function application must look like:
+% TODO color the subtyping part
+
+\begin{mathpar}
+  \inferrule*{
+    \Gamma \vdash f : \tau \rightarrow \tau'
+    \\
+    \Gamma \vdash e : \tau_e
+    \\
+    \tau_e \subseteq \tau
+  }{
+    \Gamma \vdash f~e : \tau'
+  }
+\end{mathpar}
+
+\noindent \textbf{Challenge 1}: how to turn $\tau_e \subseteq \tau$ into a constraint?
+There are two ``obvious'' solutions (for some value of obvious).
+
+\begin{itemize}
+\item
+  \emph{(retained inequalities)}
+  Do nothing!
+  Keep $\tau_e \subseteq \tau$ as a constraint, and change the solver from
+   Robinson resolution to something more sophisticated, that can handle
+   subset constraints.
+\item
+  \emph{(convert to equalities)}
+  Convert the inequality to an equality using the venerable technique of
+   \emph{slack variables}.
+  In this case, $\tau_e \subseteq \tau$ generates the constraint
+   $\tau_e \cup \alpha = \tau$.
+\end{itemize}
+
+\noindent \lefthand~Fagan chooses to \emph{convert} the inequalities.
+
+\noindent \textbf{Note}: his choice is partially motivated by three perceived
+ challenges with retained inequalities:
+\begin{itemize}
+\item
+  the set of inequalities will grow quickly, may not be possible to simplify, and may require exponential time to solve;
+\item
+  it is unclear how to convert an inconsistent set of constraints into a safety-ensuring runtime check;
+\item
+  existing type systems with retained inequalities do not handle parametric polymorphism.
+\end{itemize}
+
+We will revisit these issues later, in the section on \emph{Soft Typing with
+ Conditional Types}.
+\textbf{End Note}
+% TODO use proper section & label/ref ????
+
+\noindent \textbf{Challenge 2}: the Hindley-Milner solver (Robinson resolution)
+ finds most-general-unifiers only for terms in a \emph{free} term algebra.
+But we have terms like $\tau_e \cup \alpha = \tau$ that use the union operator ($\cup$).
+Union is not free!
+It is associative, commutative, and idempotent (ACI).
+
+\noindent \emph{What to do?}
+We can start like computer science normally does, by asking mathematicians for
+ help.
+And it turns out, general unification theory has results for ACI unification.
+Unfortunately ACI unificiation:
+\begin{itemize}
+\item
+  produces multiple unifiers;
+\item
+  does not support the circularity needed to infer recursive types;\footnote{This may have changed, but was true in 1990.}
+\item
+  does not offer any distributivity, but we need equations like $c~\tau \cup c~\tau' = c(\tau \cup \tau')$
+  (furthermore, Fagan notes that distributive, associative theories do not have unification methods).
+\end{itemize}
+
+
+\noindent \emph{What to do (2)?}
+Fagan restricts the solution space to \emph{discriminative} unions over rational
+ regular trees.
+\begin{itemize}
+\item
+  A \emph{discriminative} union contains at most one occurrence of each type constructor.
+  This solves the ACI issues because (AC) we can sort the constructors (I) and
+  idempotence becomes a non-issue by definition.
+\item
+  A \emph{rational regular tree} is a possibly-infinite tree with a finite set
+  of non-isomorphic subtrees. (Example: reduction graph for $(K~I~\Omega)$.)
+\end{itemize}
+
+\begin{proposition}
+Algorithm W can infer a substitution for two rational
+ regular trees, if a substitution exists.
+\end{proposition}
+
+\begin{proposition}
+There is a useful type system for dynamically typed programs whose types
+ are isomorphic to rational regular trees.
+\end{proposition}
+
+
+%% -----------------------------------------------------------------------------
+\subsection*{Diversion: The R\'{e}my Encoding}
+
+% TODO cite
+Not going to prove those propositions, but want to give a general idea of how
+ the encoding works.
+It is based on a technique by Didier R\'{e}my for adding records with structural
+ subtyping to ML.
+
+
+\subsubsection*{Setup}
+
+Start with the ML language, want to add record types.
+A record type is a sequence of field labels $l$ and types.
+
+\[\begin{array}{l c l}
+  e & \coloneq & \ldots \mid \{ l = e , \ldots \}
+\\\tau & \coloneq & \ldots \mid \{ l : \tau , \ldots \}
+  \end{array}\]
+
+Also want structural subtyping, so if we have a function that extracts the
+value of the {\tt left} label on a record, it works for records with more
+labels.
+
+\begin{verbatim}
+    let get_left (x : {left : 'a}) : 'a =
+      x.left
+
+    get_left {left = 1};;
+    get_left {left = 1, right = 2};;
+\end{verbatim}
+
+
+\subsubsection*{Insight and Solution Sketch}
+
+Suppose the set $l$ of labels has only 2 elements and records can only contain
+ values of type $\tunit$.
+Then we can encode all possible record types in a 4-element lattice, where
+ each label is either present or absent in each type.
+
+%% TODO diagram lattice
+
+For example, $X = {\tt xo}$ and $Y = {\tt xx}$ are two possible record values.
+Their types are obvious.
+
+One way to add subtyping would be to pretend that $X$ and $Y$ denote multiple values:
+
+\[
+  X = {\tt oo} \mid {\tt xo}
+\\
+  Y = {\tt oo} \mid {\tt xo} \mid {\tt ox} \mid {\tt xx}
+\]
+
+Then we can take the union or intersection of these ``value sets''.
+But we do not want multiple values; we want one value for $X$ and one value for $Y$.
+
+R\'{e}my's solution is to encode the various types of $X$ and $Y$ with polymorphism.
+He does so in two steps:
+\begin{enumerate}
+\item
+  Add \emph{flags} to the labels in record types, indicating whether the
+  label is present ({\tt +}), absent ({\tt +}), or unknown.
+\item
+  Introduce variables $\phi$ that range over the flags.
+\end{enumerate}
+
+Using this encoding, the final types for $X$ and $Y$ are:
+
+\[
+  X : \{\phi_0 : \tunit, {\tt -} : \tunit\}
+  \\
+  Y : \{\phi_1 : \tunit, \phi_2 : \tunit\}
+\]
+
+The absent field in $X$ has flag {\tt -}.
+The present fields in $X$ and $Y$ have a flag variable, meaning they could be
+ used or forgotten depending on the context.
+For example, the expression {\tt if e then X else Y} has type $\{\phi : \tunit, \texttt{-} : \tunit\}$
+by unifying $\phi_2$ with {\tt -}.
+Also, the type for {\tt get\_left} is $\{left : \texttt{+}, right : \phi \} \rightarrow \tunit$.
+
+If you have more labels, just make longer types.
+That's the essence of the encoding.
+
+\begin{quote}
+  ``Variants are to concrete data types what records are to labelled products.'' --- R\'{e}my
+\end{quote}
+
+Adding structural subtyping for variants is straightforward; a variant type is
+ the sum of all appropriately-flagged possibilities.
+
+R\'{e}my adds recursive types, records, and variants to the ML type system and
+ proves the same \emph{soundness}, \emph{completeness}, and \emph{principle types}
+ properties as Milner.
+Clean and simple.
+
+
+%% -----------------------------------------------------------------------------
+\subsection*{Fagan's Soft Type System}
+
+Back to soft typing, ``the'' type for expressions in a dynamically typed program
+ is one large variant of all the possible base types.
+
+Given the following grammar of types,
+
+\[\begin{array}{l c l}
+  \tau & \coloneq & \tint \mid \tbool \mid \tau \rightarrow \tau
+  \end{array}\]
+
+we can express:
+\begin{itemize}
+\item
+  Integers $: [\tint +, \tbool -, \rightarrow -, \alpha_0, \alpha_1]$
+\item
+  Booleans or Integers $: [\tint +, \tbool +, \rightarrow -, \alpha_0, \alpha_1]$
+\item
+  Functions from integers to booleans $: [\tint -, \tbool -, \rightarrow +, [\tint +, \tbool -, \rightarrow -, \alpha_0, \alpha_1], [\tint -, \tbool +, \rightarrow -, \alpha_2, \alpha_3]]$
+\end{itemize}
+
+These are types written in Fagan's notation.
+The type variables cover ``stucturally similar'' positions.
+Wright makes further use of type variables, so we will use his system instead.
+
+% Wrap-up
+% - types->vectors -> infer -> types (details in paper)
+% - lots of example derivations (in paper)
+% - insert narrowers to preserve safety and semantics of possibly-unsafe programs
+
+
+%% -----------------------------------------------------------------------------
+\subsection*{Wright's Soft Type System}
+
+Wright presents a soft type system for $\purescheme{}$.
+
+\subsubsection*{Expressions, Operational Semantics, Stuck Programs}
+Terms $e$ are lambda terms, and are made of values $v$, primitives $c$, base
+ values $b$, and primitive functions $p$.
+
+\[\begin{array}{l c l}
+   e & \coloneq & v \mid (\eap~e~e) \mid (\ecap~e~e) \mid (\eif~e~e~e) \mid (\elet{(x~e)}{e})
+\\ v & \coloneq & c \mid x \mid (\elam{x}{e})
+\\ c & \coloneq & b \mid p
+\\ b & \coloneq & \mathsf{integer} \mid \etrue{} \mid \efalse{} \mid \enil{}
+\\ p & \coloneq & \eadd \mid \econs \mid \efirst \mid \esecond \mid \eintp \mid \ecadd \mid \ldots
+  \end{array}\]
+
+The unconventional thing about $\purescheme{}$ is that applications are labeled
+ as unsafe ($\ecap$) or checked ($\eap$).
+Primitive operations also come in unsafe (e.g. $\eadd$) and checked flavors ($\ecadd$).
+If the checks are present, the operational semantics will raise a special error
+ $\echecked$ instead of undefined behavior.
+
+\[\begin{array}{l c l l}
+   E[(\eap~(\elam{x}{e})~v)] & \mapsto & E[e[x/v]] &
+\\ E[(\ecap~(\elam{x}{e})~v)] & \mapsto & E[e[x/v]] &
+\\ E[(\elet{x~v}{e})] & \mapsto & E[e[x/v]] &
+\\ E[(\eif~v~e_0~e_1)] & \mapsto & E[e_0] & \mbox{ when } v \neq \efalse
+\\ E[(\eif~\efalse~e_0~e_1)] & \mapsto & E[e_1] &
+\\ E[(\eap~p~v)] & \mapsto & E[v]  & \mbox{ when } v' = \delta(p, v)
+\\ E[(\eap~p~v)] & \mapsto & \echecked & \mbox{ when } \echecked = \delta(p, v)
+\\ E[(\ecap~p~v)] & \mapsto & E[v'] & \mbox{ when } v' = \delta(p, v)
+\\ E[(\ecap~p~v)] & \mapsto & \echecked & \mbox{ when } \echecked = \delta(p, v)
+\\ E[(\ecap~b~v)] & \mapsto & \echecked &
+  \end{array}\]
+
+The $\delta$ metafunction what you would expect.
+Here are its cases for checked primitives:
+
+\[\begin{array}{l c l l}
+  \delta(\mathsf{CHECK{\mhyphen}p}, v) & = & v' & \mbox{ when } v' = \delta(p, v)
+\\\delta(\mathsf{CHECK{\mhyphen}p}, v) & = & \echecked & \mbox{ when } \delta(p, v) \mbox{ is undefined}
+  \end{array}\]
+
+The purpose of showing these definitions was to define what it means for a
+ program to be stuck.
+Stuck evaluation contexts have the following forms:
+
+\[\begin{array}{l l}
+   E[(\eap~p~v)] & \mbox{ where } \delta(p, v) \mbox{ is undefined}
+\\ E[(\ecap~p~v)] & \mbox{ where } \delta(p, v) \mbox{ is undefined}
+\\ E[(\eap~b~v)]
+  \end{array}\]
+
+\begin{proposition}
+(dynamic typing) terms $e$ that always use $\ecap$ and checked primitives never
+ transition to a stuck state via the reflexive, transitive closure of $\mapsto$
+\end{proposition}
+
+The (upcoming) soft type system will justify replacing some checked operations
+ with unsafe ones.
+
+
+\subsubsection*{Type System}
+
+%% TODO fill in here
+First static types.
+Second, soft types.
+
+The static type system will have the property SOUNDNESS.
+
+The soft type system will have the property TODO.
+
+
+Wright's grammar for static types $\tau$ is unconventional.
+To start, a type $\tau$ can be empty ($\emptyset$) or a type variable ($\alpha$)
+ or a recursive type ($\trec{\alpha}{\tau}$).
+A type can also be a sequence of tagged ($k$), flagged ($f$), parameterized
+ types, followed by a type variable or empty type.
+A tag is a type constructor; each constructor has a fixed arity.
+The grammar for flags is the same used by R\'{e}my~\cite{r-popl-1989}.
+
+Type schemes $\Sigma$ bind type variables.
+Substitutions $S$ are used in unification.
+
+\[\begin{array}{l c l}
+   G0 & \coloneq & \alpha \mid \emptyset
+\\ G1 & \coloneq & (k^f~\tau~\ldots) \cup G1 \mid G0
+\\ \tau & \coloneq & G0 \mid G1 \mid \trec{\alpha}{\tau}
+\\ k & \coloneq & \tint \mid \ttrue \mid \tfalse \mid \tnil \mid \rightarrow
+\\ f & \coloneq & + \mid \mhyphen \mid \phi
+\\ \Sigma & \coloneq & \tall{\nu}{\Sigma} \mid \tau
+\\ S & \coloneq & \cdot \mid \alpha = \Sigma,S \mid \phi = f, S
+\\ \nu & \coloneq & \alpha \mid \phi
+  \end{array}\]
+
+\noindent \leafNE~\textbf{Note:} the above grammar is incomplete,
+ when we get to soft types we will need \emph{absent} type and flag variables,
+  along with absent types $\absent{\tau}$ and absent flags $\absent{f}$.
+ Will clarify their purpose later, but for now the important point is that
+  the full grammar for substitutions $S$ maps absent variables to absent non-terminals:
+
+ \[\begin{array}{l c l}
+    S & \coloneq & \cdot \mid \alpha = \Sigma,S \mid \phi = f, S \mid \absent{\phi} = \absent{f}, S \mid \absent{\alpha} = \absent{\tau}, S
+ \end{array}\]
+
+Examples:
+\begin{itemize}
+\item
+  $4 : (\tint +) \cup \emptyset$
+\item
+  $4 : (\tint +) \cup (\ttrue \mhyphen) \cup \emptyset$
+\item
+  $\etrue : (\ttrue +) \cup (\tfalse +) \cup \emptyset$
+\item
+  $\eintp : (\rightarrow + \alpha ((\ttrue +) \cup (\tfalse +) \cup \emptyset)) \cup \emptyset$
+\end{itemize}
+
+(A little strange, but not as difficult to write as Fagan's.)
+
+These types must also be discriminative; each constructor $k$ can appear at most
+ once in a union type.
+This means that type variables at the end of a union quantify \emph{only} over
+ missing constructors.
+Discriminativity also lets Wright re-order constructors in a union to a canonical order.
+
+Example type scheme:
+
+$$ \tall{\phi_0, \phi_1}{(\tint \phi_0) \cup (\tnil \phi_1) \cup \emptyset} $$
+
+this scheme represents a lattice of four types, just like the R\'{e}my-encoded
+ type for records with two labels.
+
+Types for primitive operations are next on the agenda.
+But you should keep in mind this general intuition:
+\begin{itemize}
+\item
+  flag variables $\phi$ in a function domain allow subtyping at call sites
+\item
+  type variables $\alpha$ in a function codomain let the function return a \emph{supertype}
+\end{itemize}
+
+As a simple example illustrating the second point, consider this $\eif$-statement:
+
+$$ \eif~e~1~\efalse $$
+
+Its type should be the union of the types for the constants 1 and $\efalse$.
+To make this union defined, their types are:
+
+$$ 1 : \tall{\alpha}{(\tint +) \cup \alpha}
+   \\
+   \efalse : \tall{\alpha}{(\tfalse +) \cup \alpha}$$
+
+Hence the union is:
+
+$$ \tall{\alpha}{(\tint +) \cup (\tfalse +) \cup \alpha} $$
+
+\noindent \textbf{Static Primop Types}
+
+yolo
+
+\noindent \textbf{Static Type Checking}
+
+\noindent \textbf{Soft Primop Types}
+
+\noindent \textbf{Soft Type Checking}
+
+\noindent \textbf{Correctness}
+
+
+\subsection*{Soft Typing for Scheme (R4RS)}
+
+\textbf{Experience and Performance}
+
+
+
+%% -----------------------------------------------------------------------------
+\subsection*{Soft Typing with Conditional Types}
+\label{sec:awl-popl-1994}
+
+% Recall the issues from Fagan:
+% - large set of inequalities
+% - how to insert runtime checks?
+% - 
+% Lemma 7.1: where/how to insert inequalities
+
+%% -----------------------------------------------------------------------------
+\subsection*{Quasi-Static Typing}
+\label{sec:t-popl-1990}
+
+%% -----------------------------------------------------------------------------
+\subsection*{Global Tagging Optimization by Type Inference}
+\label{sec:h-lfp-1992}
+
+%% -----------------------------------------------------------------------------
+\subsection*{Questions}
+
+In other words, these are things that do not fit in the real presentation, but
+are interesting and might come up as questions.
+
+\qa{
+  Fundamental Theorem of Static Typing?
+}{
+  Fagan states and proves the ``fundamental theorem'', that a static type system
+  must reject some meaningful programs~\cite{f-thesis-1991}.
+  Here are the relevant definitions from Fagan:
+
+  Let a \emph{programming language} be a triple $\angles{\flang, \fval, \fden{\cdot}}$
+  where $\flang$ is the syntax of the language, $\fval$ are the value forms,
+  and $\fden{\cdot}$ is a denotational semantics mapping syntax to values.
+
+  A programming language is \emph{interesting} if (1) all terms have a value
+  (2) the set $\fval$ includes values denoting errors and non-terminating
+  computations (3) the language includes an $\mathsf{if}$-statement (4) the
+  set of terminating programs is recursively enumerable but not
+  recursive.\footnote{A \emph{recursively enumerable} set is a set that can be
+  computed by a (partial) Turing machine. A \emph{recursive} set can be
+  computed by a total Turing machine. The difference is roughly ``computable''
+  vs. ``decidable''.}
+
+  A \emph{good program} written in a language $\angles{\flang, \fval, \fden{\cdot}}$
+  is a member of the set $\{e \mid e \in \flang \wedge \fden{e} \neq \fwrong \}$.
+
+  A \emph{static type system} for a language $\angles{\flang, \fval, \fden{\cdot}}$
+  computes a recursive set $\flang_W \subset \flang$ such that for all $e \in \flang$,
+  the value $\fden{e}$ is not $\fwrong$.
+
+  Fagan then proves:
+  \begin{itemize}
+  \item \textbf{Lemma 1.1} \emph{the set of good programs is not recursive}
+  \item \textbf{Fundamental Theorem of Static Typing} \emph{any set of well-typed
+   programs $\flang_W$ is a strict subset of the set of good programs}
+  \end{itemize}
+
+  The proofs are in Fagan's dissertation~\cite{f-thesis-1991}, but proving them is a nice exercise.
+}
+
+\qa{
+  What were Wright's extensions, how did they work?
+}{
+  
+}
+
+
+%% -----------------------------------------------------------------------------
+\subsection*{Appendix}
+
+%% TODO hindley-milner inference rules
+%% robinson resolution
+% MGU(B,B) = ()
+% MGU(-> A B, -> C D) = let S1 = MGU(A,C) in let S2 = MGU(S1 B, S1 D) in S1 union S2
+% MGU(a, T) = (a -> T)
+% MGU(T, a) = (a -> T)
+% MGU(- -) = error
 
 \footnotesize
 \bibliographystyle{plain}

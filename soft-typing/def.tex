@@ -1,6 +1,8 @@
 \usepackage[colorlinks=true]{hyperref}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{mathpartir}
+\usepackage{fourier-orns}
 \usepackage{amsthm}
 \usepackage{dashrule}
 \usepackage{tikz}
@@ -8,6 +10,10 @@
 \usepackage{textgreek}
 \usepackage{multicol}
 \usepackage{listings}
+%\usepackage[margin=1in]{geometry}
+\usepackage{stmaryrd}
+
+\mathchardef\mhyphen="2D
 
 \renewcommand{\maketitle}[1]{{%
 \flushleft\textsf{#1 \hfill \today} \\
@@ -17,6 +23,18 @@
 \vspace{0.4cm}}}
 
 
+\newcommand{\elam}[2]{\lambda\,#1.\,#2}
+\newcommand{\elet}[2]{\mathsf{let}~#1~\mathsf{in}~#2}
+\newcommand{\tall}[2]{\forall\,#1.\,#2}
+\newcommand{\trec}[2]{\mu\,#1.\,#2}
+\newcommand{\tint}{\mathsf{Int}}
+\newcommand{\tunit}{\mathsf{Unit}}
+\newcommand{\eap}{\mathsf{ap}}
+\newcommand{\ecap}{\mathsf{CHECK-ap}}
+\newcommand{\eif}{\mathsf{if}}
+\newcommand{\purescheme}{\mathsf{PureScheme}}
+\newcommand{\tbool}{\mathsf{Bool}}
+\newcommand{\coloneq}{::\,=}
 \newcommand{\hdash}{{\vspace{1ex}}\hdashrule{\linewidth}{0.2ex}{1em}{\vspace{1ex}}}
 \newcommand{\naturals}{\mathbb{N}}
 
@@ -25,5 +43,26 @@
 \newcommand{\secref}[1]{Section~\ref{#1}}
 
 \newtheorem*{theorem}{Theorem}
+\newtheorem*{proposition}{Proposition}
 
 \newcommand{\qa}[2]{\vspace{2ex}\noindent \textbf{Q.} #1 \newline \noindent \textbf{A.} #2}
+
+\newcommand{\angles}[1]{\langle #1 \rangle}
+\newcommand{\flang}{\mathsf{L}}
+\newcommand{\fval}{\mathsf{V}}
+\newcommand{\fden}[1]{\llbracket #1 \rrbracket}
+\newcommand{\fwrong}{\mathsf{wrong}}
+\newcommand{\etrue}{\mathsf{true}}
+\newcommand{\efalse}{\mathsf{false}}
+\newcommand{\ttrue}{\mathsf{True}}
+\newcommand{\tfalse}{\mathsf{False}}
+\newcommand{\tnil}{\mathsf{Nil}}
+\newcommand{\enil}{\mathsf{nil}}
+\newcommand{\eadd}{\mathsf{add1}}
+\newcommand{\ecadd}{\mathsf{CHECK{\mhyphen}add1}}
+\newcommand{\echecked}{\mathsf{checked}}
+\newcommand{\eintp}{\mathsf{integer?}}
+\newcommand{\econs}{\mathsf{cons}}
+\newcommand{\efirst}{\mathsf{first}}
+\newcommand{\esecond}{\mathsf{second}}
+\newcommand{\absent}[1]{\overline{#1}}
