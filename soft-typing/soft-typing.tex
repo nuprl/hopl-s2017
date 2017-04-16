@@ -203,7 +203,7 @@ Type Inference: \fbox{$W(\Gamma, e) = (S, \tau)$}
 \end{theorem}
 
 \begin{theorem}
-  (principal types) If $W(A,e) = (S,\tau)$ then the generalization
+  (principal types) If $W(\Gamma,e) = (S,\tau)$ then the generalization
   of $\tau$ under $\Gamma \circ S$ is a principal type of $e$ under $\Gamma \circ S$.
 \end{theorem}
 
@@ -390,7 +390,7 @@ He does so in two steps:
 \begin{enumerate}
 \item
   Add \emph{flags} to the labels in record types, indicating whether the
-  label is present ({\tt +}), absent ({\tt +}), or unknown.
+  label is present ($\fplus$), absent ($\fminus$), or unknown.
 \item
   Introduce variables $\phi$ that range over the flags.
 \end{enumerate}
@@ -527,9 +527,22 @@ The (upcoming) soft type system will justify replacing some checked operations
 First static types.
 Second, soft types.
 
-The static type system will have the property SOUNDNESS.
+The static type system will have type soundness.
+\begin{theorem}
+(soundness) if $\vdash e : \tau$ then either $e$ diverges or $e \mapsto^* \echecked$
+ or $e \mapsto^* v$ and $\vdash v : \tau$.
+\end{theorem}
 
-The soft type system will have the property TODO.
+The soft type system will have two important properties
+
+\begin{theorem}
+(universal applicability) for all $e$, there exist $e'$ and $\tau$ such that
+ $\vdash e \Rightarrow e' : \tau$
+\end{theorem}
+
+\begin{theorem}
+(static typability) if $\vdash e \Rightarrow e' : \tau$ then $\vdash e' : \absent{S} \circ \tau$
+\end{theorem}
 
 
 Wright's grammar for static types $\tau$ is unconventional.
@@ -548,7 +561,7 @@ Substitutions $S$ are used in unification.
 \\ G1 & \coloneq & (k^f~\tau~\ldots) \cup G1 \mid G0
 \\ \tau & \coloneq & G0 \mid G1 \mid \trec{\alpha}{\tau}
 \\ k & \coloneq & \tint \mid \ttrue \mid \tfalse \mid \tnil \mid \rightarrow
-\\ f & \coloneq & + \mid \mhyphen \mid \phi
+\\ f & \coloneq & \fplus \mid \fminus \mid \phi
 \\ \Sigma & \coloneq & \tall{\nu}{\Sigma} \mid \tau
 \\ S & \coloneq & \cdot \mid \alpha = \Sigma,S \mid \phi = f, S
 \\ \nu & \coloneq & \alpha \mid \phi
@@ -567,13 +580,13 @@ Substitutions $S$ are used in unification.
 Examples:
 \begin{itemize}
 \item
-  $4 : (\tint +) \cup \emptyset$
+  $4 : (\tint \fplus) \cup \emptyset$
 \item
-  $4 : (\tint +) \cup (\ttrue \mhyphen) \cup \emptyset$
+  $4 : (\tint \fplus) \cup (\ttrue \fplus) \cup \emptyset$
 \item
-  $\etrue : (\ttrue +) \cup (\tfalse +) \cup \emptyset$
+  $\etrue : (\ttrue \fplus) \cup (\tfalse \fplus) \cup \emptyset$
 \item
-  $\eintp : (\rightarrow + \alpha ((\ttrue +) \cup (\tfalse +) \cup \emptyset)) \cup \emptyset$
+  $\eintp : (\rightarrow \fplus \alpha ((\ttrue \fplus) \cup (\tfalse \fplus) \cup \emptyset)) \cup \emptyset$
 \end{itemize}
 
 (A little strange, but not as difficult to write as Fagan's.)
@@ -607,50 +620,366 @@ $$ \eif~e~1~\efalse $$
 Its type should be the union of the types for the constants 1 and $\efalse$.
 To make this union defined, their types are:
 
-$$ 1 : \tall{\alpha}{(\tint +) \cup \alpha}
+$$ 1 : \tall{\alpha}{(\tint \fplus) \cup \alpha}
    \\
-   \efalse : \tall{\alpha}{(\tfalse +) \cup \alpha}$$
+   \efalse : \tall{\alpha}{(\tfalse \fplus) \cup \alpha}$$
 
 Hence the union is:
 
-$$ \tall{\alpha}{(\tint +) \cup (\tfalse +) \cup \alpha} $$
+$$ \tall{\alpha}{(\tint \fplus) \cup (\tfalse \fplus) \cup \alpha} $$
+
 
 \noindent \textbf{Static Primop Types}
 
-yolo
+Remember (from R\`{e}my~\cite{r-popl-1989}):
+\begin{quote}
+  A positive occurrence of a union type ending with a type variable ($\alpha$)
+  can be unified with any supertype.
+\end{quote}
+This is why the types bind so many variables.
+
+
+\[\begin{array}{l c l}
+   4 & : & \tall{\alpha}{\tint^\fplus \cup \alpha}
+\\ \eadd & : & \tall{\alpha_0~\alpha_1~\phi}{(\rightarrow^\fplus~(\tint^{\phi_0} \cup \emptyset)~(\tint^\fplus \cup \alpha_0)) \cup \alpha_1}
+\\ \eintp & : & \tall{\alpha_0~\alpha_1~\alpha_2}{(\rightarrow^\fplus~\alpha_0~(\ttrue^\fplus \cup \tfalse^\fplus \cup \alpha_1)) \cup \alpha_2}
+\\ \econs & : & \tall{\alpha_0~\alpha_1~\alpha_2~\alpha_3~\alpha_4}{(\rightarrow^\fplus~\alpha_0~(\rightarrow^\fplus~\alpha_1~((\tcons^\fplus~\alpha_0~\alpha_1) \cup \alpha_2)) \cup \alpha_3) \cup \alpha_4}
+\\ \efirst & : & \tall{\alpha_0~\alpha_1~\alpha_2~\phi}{(\rightarrow^\fplus~((\tcons^\fplus~\alpha_0~\alpha_1) \cup \emptyset)~\alpha_0) \cup \alpha_2}
+\\ \esecond & : & \tall{\alpha_0~\alpha_1~\alpha_2~\phi}{(\rightarrow^\fplus~((\tcons^\fplus~\alpha_0~\alpha_1) \cup \emptyset)~\alpha_1) \cup \alpha_2}
+  \end{array}\]
+
+\noindent \noway~The flag $\phi_0$ on the domain of $\eadd$ should seem unnecessary.
+Using $\fplus$ instead would be the more natural choice.
+The reason for using a flag variable is that it adds no constraints during
+ unification (it would be ``less good'' if an application of $\eadd$ bound
+ a flag variable in context to $\fplus$; Wright calls this \emph{reverse flow}~\cite{w-thesis-1994}).
+
 
 \noindent \textbf{Static Type Checking}
 
+The judgment $\Gamma \vdash e : \tau$ states that term $e$, which is closed
+ under the type environment $\Gamma$, has type $\tau$.\footnote{Fagan, Wright, and R\`{e}my all use the letter $A$ (for ``type assumptions'') rather than $\Gamma$~\cite{r-popl-1989, f-thesis-1991, w-thesis-1994}.}
+
+The judgment relies on three auxilliaries:
+\begin{itemize}
+\item the metafunction $\ttypeof : c \rightarrow \Sigma$ returns
+       the static type of a constant;
+\item the judgment $\tau \prec_S \Sigma$
+      states that $\tau$ is a substitution instance of the type scheme $\Sigma$ (in
+      particular, $S\,\Sigma = \tau$);
+\item the metafunction $\eclose : \Gamma \times \tau \rightarrow \Sigma$
+      generalizes free variables in its second argument that are not bound in
+      its first argument.
+\end{itemize}
+
+\noindent \fbox{$\Gamma \vdash e : \tau$}
+\begin{mathpar}
+  \inferrule*{
+    \tau \prec_S \ttypeof(c)
+  }{
+    \Gamma \vdash c : \tau
+  }
+
+  \inferrule*{
+    \tau \prec_S \Gamma(x)
+  }{
+    \Gamma \vdash x : \tau
+  }
+
+  \inferrule*{
+    \Gamma \vdash f : (\rightarrow^\phi~\tau'~\tau) \cup \tau''
+    \\\\
+    \Gamma \vdash e : \tau'
+  }{
+    \Gamma \vdash (\eap~f~e) : \tau
+  }
+
+  \inferrule*{
+    \Gamma \vdash f : (\rightarrow^\phi~\tau'~\tau) \cup \emptyset
+    \\\\
+    \Gamma \vdash e : \tau'
+  }{
+    \Gamma \vdash (\ecap~f~e) : \tau
+  }
+
+  \inferrule*{
+    \Gamma, x : \tau \vdash e : \tau'
+  }{
+    \Gamma \vdash \elam{x}{e} : (\rightarrow^\fplus~\tau~\tau') \cup \tau''
+  }
+
+  \inferrule*{
+    \Gamma \vdash e_0 : \tau'
+    \\\\
+    \Gamma \vdash e_1 : \tau
+    \\\\
+    \Gamma \vdash e_2 : \tau
+  }{
+    \Gamma \vdash \eif~e_0~e_1~e_2 : \tau
+  }
+
+  \inferrule*{
+    \Gamma \vdash e_0 : \tau'
+    \\\\
+    \Gamma[x := \eclose(\Gamma, \tau')] \vdash e_1 : \tau
+  }{
+    \Gamma \vdash \elet{x~e_0}{e_1} : \tau
+  }
+\end{mathpar}
+
 \noindent \textbf{Soft Primop Types}
+
+The soft types are similar to the static types, but use \emph{absent variables}
+ instead of $\emptyset$ in negative positions.
+An absent variable $\absent{\alpha}$ is an identifier drawn from an infinite set,
+ same as type variables and flag variables.
+In the next section, the soft typing judgments will check whether absent
+ variables are instantiated with non-empty types.
+
+\[\begin{array}{l c l}
+   4 & : & \tall{\alpha}{\tint^\fplus \cup \alpha}
+\\ \eadd & : & \tall{\alpha_0~\alpha_1~\absent{\alpha_2}~\phi}{(\rightarrow^\fplus~(\tint^{\phi_0} \cup \absent{\alpha_2})~(\tint^\fplus \cup \alpha_0)) \cup \alpha_1}
+\\ \eintp & : & \tall{\alpha_0~\alpha_1~\alpha_2}{(\rightarrow^\fplus~\alpha_0~(\ttrue^\fplus \cup \tfalse^\fplus \cup \alpha_1)) \cup \alpha_2}
+\\ \econs & : & \tall{\alpha_0~\alpha_1~\alpha_2~\alpha_3~\alpha_4}{(\rightarrow^\fplus~\alpha_0~(\rightarrow^\fplus~\alpha_1~((\tcons^\fplus~\alpha_0~\alpha_1) \cup \alpha_2)) \cup \alpha_3) \cup \alpha_4}
+\\ \efirst & : & \tall{\alpha_0~\alpha_1~\alpha_2~\absent{\alpha_3}~\phi}{(\rightarrow^\fplus~((\tcons^\fplus~\alpha_0~\alpha_1) \cup \absent{\alpha_3})~\alpha_0) \cup \alpha_2}
+\\ \esecond & : & \tall{\alpha_0~\alpha_1~\alpha_2~\absent{\alpha_3}~\phi}{(\rightarrow^\fplus~((\tcons^\fplus~\alpha_0~\alpha_1) \cup \absent{\alpha_3})~\alpha_1) \cup \alpha_2}
+  \end{array}\]
+
+
 
 \noindent \textbf{Soft Type Checking}
 
-\noindent \textbf{Correctness}
+The soft typing judgment $\Gamma \vdash e \Rightarrow e' : \tau$ states that
+ terms $e$ and $e'$ (both closed under $\Gamma$) are syntactically identical
+ except that $e'$ may use a checked operation where $e$ uses an unchecked one.
+Furthermore, $\Gamma \vdash e' : \tau$.
+
+Auxilliaries:
+\begin{itemize}
+\item $\tsofttypeof : c \rightarrow \Sigma$ returns the soft type of a constant
+\item $\eempty : \tau \vee f \rightarrow \tbool$ returns $\etrue$ when all types in
+ the given set are empty, and all flags in the given set are $\fminus$.
+\item $\esoftclose$ is similar to $\eclose$, but does not generalize absent variables.
+  Wright's thesis suggests ways to lighten this restriction.
+\end{itemize}
+
+\noindent \fbox{$\Gamma \vdash e \Rightarrow e' : \tau$}
+\begin{mathpar}
+
+  \inferrule*{
+    \tau \prec_S \tsofttypeof(c)
+    \\\\
+    \forall \absent{\nu} \in S\,.\,\eempty(S(\absent{\nu}))
+  }{
+    \Gamma \vdash c \Rightarrow c : \tau
+  }
+
+  \inferrule*{
+    \tau \prec_S \tsofttypeof(c)
+  }{
+    \Gamma \vdash c \Rightarrow CHECK{\mhyphen}c : \tau
+  }
+
+  \inferrule*{
+    \tau \prec_S \Gamma(x)
+  }{
+    \Gamma \vdash x \Rightarrow x : \tau
+  }
+
+  \inferrule*{
+    \Gamma \vdash f \Rightarrow f' : (\rightarrow^\phi~\tau'~\tau) \cup \tau''
+    \\\\
+    \Gamma \vdash e \Rightarrow e' : \tau'
+    \\\\
+    \eempty(\tau'')
+  }{
+    \Gamma \vdash (\eap~f~e) \Rightarrow (\eap~f'~e') : \tau
+  }
+
+  \inferrule*{
+    \Gamma \vdash f \Rightarrow f' : (\rightarrow^\phi~\tau'~\tau) \cup \tau''
+    \\\\
+    \Gamma \vdash e \Rightarrow e' : \tau'
+  }{
+    \Gamma \vdash (\eap~f~e) \Rightarrow (\ecap~f'~e') : \tau
+  }
+
+  \inferrule*{
+    \Gamma \vdash f \Rightarrow f' : (\rightarrow^\phi~\tau'~\tau) \cup \tau''
+    \\\\
+    \Gamma \vdash e \Rightarrow e' : \tau'
+  }{
+    \Gamma \vdash (\ecap~f~e) \Rightarrow (\ecap~f'~e') : \tau
+  }
+
+  \inferrule*{
+    \Gamma,x:\tau \vdash e \Rightarrow e' : \tau'
+  }{
+    \Gamma \vdash \elam{x}{e} \Rightarrow \elam{x}{e'} : (\rightarrow^\fplus~\tau~\tau') \cup \tau''
+  }
+
+  \inferrule*{
+    \Gamma \vdash e_0 \Rightarrow e_0' : \tau'
+    \\\\
+    \Gamma \vdash e_1 \Rightarrow e_1' : \tau
+    \\\\
+    \Gamma \vdash e_2 \Rightarrow e_2' : \tau
+  }{
+    \Gamma \vdash \eif~e_0~e_1~e_2 \Rightarrow \eif~e_0'~e_1'~e_2' : \tau
+  }
+
+  \inferrule*{
+    \Gamma \vdash e_0 \Rightarrow e_0' : \tau'
+    \\\\
+    \Gamma[x := \esoftclose(\Gamma, \tau')] \vdash e_1 \Rightarrow e_1' : \tau
+  }{
+    \Gamma \vdash \elet{x~e_0}{e_1} \Rightarrow \elet{x~e_0'}{e_1'} : \tau
+  }
+\end{mathpar}
 
 
 \subsection*{Soft Typing for Scheme (R4RS)}
 
-\textbf{Experience and Performance}
+Wright built a soft type system for R4RS Scheme, on top of Chez Scheme~\cite{w-thesis-1994}.
+Adapting the model to Scheme required handling:
+\begin{itemize}
+\item mutation, strong updates
+\item {\tt call/cc}
+\item variable-arity functions
+\item {\tt letrec}
+\item mutually-recursive definitions
+\item pattern matching
+\item records and modules
+\item {\tt struct} (user-defined types)
+\item type annotations
+\item macros
+\end{itemize}
 
+Wright validated the model on 14 Scheme programs.
+Twelve programs were from the Gabriel benchmarks suite.
+The other two ({\tt Dtype} and {\tt Interp}) were Henglein's cast inferencer
+ and Cartwright and Felleisen's implementation of extensible denotational
+ semantics.
+
+The soft type system was able to infer types for these programs (of course),
+ and often improved their performance by justifying the removal of dynamic
+ type checks.
+Wright was able to futher improve the performance of four programs by
+ auditing the inferred types modifying the programs (for example, by removing
+ unnecessary strong updates).
 
 
 %% -----------------------------------------------------------------------------
 \subsection*{Soft Typing with Conditional Types}
 \label{sec:awl-popl-1994}
 
-% Recall the issues from Fagan:
-% - large set of inequalities
-% - how to insert runtime checks?
-% - 
-% Lemma 7.1: where/how to insert inequalities
+The original problem applying Hindley-Milner inference to untyped code
+ was the type rule for function application:
+
+\begin{mathpar}
+  \inferrule*{
+    \Gamma \vdash f : \tau' \rightarrow \tau
+    \\
+    \Gamma \vdash e : \tau''
+    \\
+    \tau'' \subseteq \tau'
+  }{
+    \Gamma \vdash f~e : \tau
+  }
+\end{mathpar}
+
+Specifically, the problem is \emph{what to do with $\tau'' \subseteq \tau'$}.
+Fagan chose to convert the inequality to an equality using slack variables.
+
+Aiken, Wimmers, and Lakshman chose to keep the inequalities, infer a collection
+ of \emph{set constraints} over programs, and apply a specialized constraint solver.
+Their grammar for types reflects the fact that types, in this system, are sets.
+
+\[\begin{array}{l c l}
+   \tau & \coloneq & \alpha \mid 0 \mid 1 \mid k~\tau~\ldots \mid \tau \rightarrow \tau \mid \tau \cup \tau \mid \tau \cap \tau \mid \tau~?~\tau
+\\ k & \coloneq & \tcons \mid \tint \mid \ldots
+\end{array}\]
+
+The types 0 and 1 represent the empty type and ``set of all types'', respectively.
+The operators $\cup$ and $\cap$ represent set union and set intersection.
+The operator $?$ is a type-level conditional; the type $\tau_1~?~\tau_2$ is the
+ type $\tau_1$ unless the type $\tau_2$ is empty.
+
+The type system $\Gamma, S \vdash e : \tau$ takes a type environment $\Gamma$
+ and term $e$ as input, and infers a type $\tau$ and constraints $S$.
+
+Auxiliaries:
+\begin{itemize}
+\item $V : p \rightarrow \{ x \}$ computes the set of free variables in a pattern
+\item $T : p \rightarrow \tau$ computes a type that characterizes all values that can match a pattern
+\end{itemize}
+
+Using conditional types, the type system encode control flow.
+For example, in the type rule for case statements:
+
+\noindent \fbox{$\Gamma, S \vdash e : \tau$}
+\begin{mathpar}
+  \inferrule*{
+    \Gamma, S \vdash e : \tau
+    \\\\
+    \Gamma \cup \{x : \tau_x \mid x \in V(p_i) \} \vdash e_i, p_i : \tau_i
+  }{
+    \Gamma, S \cup \{\tau \subseteq \bigcup \tau_i'\} \vdash
+    \mathsf{case}~e~\mathsf{of}~\ldots~p_i \rightarrow e_i~\ldots : \bigcup \tau_i ? (\tau \cap T(p_i))
+  }
+\end{mathpar}
+
+One more thing; the constraints in $S$ are of the form $L \subseteq R$,
+ where $L$ and $R$ are basically types, but:
+\begin{itemize}
+\item intersections $L_1 \cap L_2$ require that $L_2$ is an upward-closed monotype
+\item unions $R_1 \cup R_2$ require that $R_1 \cap R_2 = 0$
+\end{itemize}
+
+Given constraints of this form, their solver was able to quickly solve
+ the constraint sets generated by some example programs (of a few hundred lines
+ each).
 
 %% -----------------------------------------------------------------------------
 \subsection*{Quasi-Static Typing}
 \label{sec:t-popl-1990}
 
+Premise: improving on Abadi, Cardelli, Pierce, and Plotkin's type {\tt Dynamic}.
+Type {\tt Dynamic} adding explict casts in and out of any static type.
+Problem is, casting was not idempotent, and programmers needed to remember
+ the order of casts when unpacking values.
+
+Thatte's external language did not include casts, but added a dynamic type $\Omega$.
+Values of every static type \emph{inherited} possible dynamic typing implictly.
+The type inference system would infer where the casts should go.
+Automatic cast management.
+
+After type checking, Thatte ran a ``plausibility'' checker to reduce casts
+ and identify casts that were certain to fail at runtime.
+The whole system is very interesting, a predecessor of gradual typing with
+ slightly different design goals.
+
+
 %% -----------------------------------------------------------------------------
 \subsection*{Global Tagging Optimization by Type Inference}
 \label{sec:h-lfp-1992}
+
+One more system you should know about, Henglein's.
+
+Take a Scheme program, make all untag checks explicit.
+Also make all tags explicit (e.g. constructor applications).
+
+Build a constraint graph from the tags and untags, every AST node gets a variable.
+Constraints have the form $\alpha = \alpha$ or $f(\alpha ...) \le \alpha$.
+Solve equationally to get minimal (minimal cast) solution.
+
+Can solve quickly using union-find.
+
+Monomorphic type system, except for polymorphic library functions.
+But if you have programs working with list structures and want to optimize those
+ tags and checks, pretty darn good.
+Simple, fast.
+
 
 %% -----------------------------------------------------------------------------
 \subsection*{Questions}
@@ -695,12 +1024,12 @@ are interesting and might come up as questions.
   The proofs are in Fagan's dissertation~\cite{f-thesis-1991}, but proving them is a nice exercise.
 }
 
-\qa{
-  What were Wright's extensions, how did they work?
-}{
-  
-}
-
+%\qa{
+%  What were Wright's extensions, how did they work?
+%}{
+%  
+%}
+%
 
 %% -----------------------------------------------------------------------------
 \subsection*{Appendix}

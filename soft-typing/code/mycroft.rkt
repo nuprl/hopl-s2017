@@ -1,5 +1,5 @@
 #lang typed/racket/base
-(require racket/match)
+(require racket/match racket/list)
 
 ;; -----------------------------------------------------------------------------
 ;; original code
