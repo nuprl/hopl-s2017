@@ -541,7 +541,7 @@ That is, they added paths to a given control-flow graph to make context informat
 Consequently, the insensitive algorithm would give context-sensitive results.
 
 The obvious problem with this approach is that the number of contexts in a large, object-oriented program is usually large.\footnote{This is exactly why previous algorithms did not work at scale.}
-Whaley and Lam report that $10^{14}$ contexts is ``typical'', and one of the DaCapo benchmarks had $10^{23}$ contexts.\footnote{Writing this, I realize I don't know what they mean by ``context''. Like, what's the sensitivity. TODO fix.}
+Whaley and Lam report that $10^{14}$ contexts is ``typical'', and one of the DaCapo benchmarks had $10^{23}$ contexts.\footnote{A context is a call path to a method, e.g. they are reporting that if you count all the paths to all the methods, it's typical that the total count is $10^{14}$. A second, common kind of context-sensitivity is \emph{object sensitivity}~\cite{sbl-popl-2011}. Thank you to \href{http://rgrig.appspot.com/}{Radu Grigore} for helping me understand the contexts.}
 Yet they made the algorithm work at scale by:
 \begin{itemize}
 \item representing program paths as relations
