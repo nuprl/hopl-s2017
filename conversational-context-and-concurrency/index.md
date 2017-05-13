@@ -101,7 +101,7 @@ The computational models I'm going to examine are
     - Gelernter, Carriero 1992 - Coordination languages
     - Carriero, Gelernter, Mattson, Sherman 1994 - contra message-passing (**)
     - 1990s and 2000s: many Linda variants and languages including
-      tuplespaces: LIME, KLAIM, AmbientTalk
+      tuplespaces: LIME, KLAIM
     - Murphy, Picco, Roman 2006 - LIME retrospective
 
 ((The (**)s mark the sources most similar to the little models I'll be
